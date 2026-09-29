@@ -44,12 +44,13 @@ function pickVariants(list,c){
  if(!v.length)v=list.filter(x=>x.is_available!==false&&/black|dark|navy/i.test(x.options?.color||''));
  return v.slice(0,96);
 }
-async function buildProducts(printify){
+async function buildProducts(printify,opts={}){
+ const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(10,Number(opts.count)||10)),end=Math.min(slogans.length,start+count);
  const existing=await printify('/shops/'+SHOP+'/products.json?limit=100');
  const existingTitles=new Map(((existing.data&&existing.data.data)||[]).map(p=>[p.title,p]));
  const results=[];
  const variantCache=new Map();
- for(let i=0;i<slogans.length;i++){
+ for(let i=start;i<end;i++){
    const text=slogans[i],category=plan[i],c=cfg[category],title=text+' — DTF '+category.replace(/s$/,'');
    if(existingTitles.has(title)){const p=existingTitles.get(title);results.push({index:i+1,title,category,ok:true,skipped:true,id:p.id,mockup:p.images?.find(x=>x.is_default)?.src||p.images?.[0]?.src||null});continue}
    const key=c.blueprint+':'+c.provider;
@@ -77,6 +78,6 @@ async function buildProducts(printify){
      results.push({index:i+1,title,category,ok:true,id:cr.data.id,variant_count:(cr.data.variants||[]).filter(v=>v.is_enabled).length,cost_min:Math.min(...(cr.data.variants||[]).filter(v=>v.is_enabled).map(v=>v.cost)),cost_max:Math.max(...(cr.data.variants||[]).filter(v=>v.is_enabled).map(v=>v.cost)),mockup:cr.data.images?.find(x=>x.is_default)?.src||cr.data.images?.[0]?.src||null});
    }catch(e){results.push({index:i+1,title,category,ok:false,error:e.message})}
  }
- return {ok:results.every(x=>x.ok),created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
+ return {ok:results.every(x=>x.ok),start:start+1,end,created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
 }
 module.exports={buildProducts};
