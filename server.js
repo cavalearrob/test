@@ -13,6 +13,18 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
+ if(p==='/api/store/catalog'){
+  const r=await printify('/shops/6647970/products.json?limit=50');
+  if(r.status>=400)return json(res,r.status,{ok:false,error:r.data});
+  const rows=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF ')).map(x=>{
+    const enabled=(x.variants||[]).filter(v=>v.is_enabled);
+    const price=enabled.length?Math.min(...enabled.map(v=>v.price)):null;
+    const suffix=x.title.split(' — DTF ').pop();
+    const category=suffix==='T-Shirt'?'T-Shirts':suffix==='Tank Top'?'Tank Tops':suffix==='Crop Top'?'Crop Tops':suffix==='Hoodie'?'Hoodies':suffix==='Sweatpant'?'Sweatpants':suffix==='Pantie'?'Panties':suffix;
+    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:x.images?.find(i=>i.is_default)?.src||x.images?.[0]?.src||null,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
+  });
+  return json(res,200,{ok:true,count:rows.length,products:rows});
+ }
  if(p==='/api/printify/build-drafts'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to render artwork and create the 40 DTF products as Printify drafts. Existing matching titles are skipped.'});
   const out=await buildProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
