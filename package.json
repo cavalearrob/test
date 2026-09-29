@@ -1,0 +1,1 @@
+{"name":"dirty-thoughts-fashion","version":"1.0.0","private":true,"description":"Dirty Thoughts Fashion storefront","main":"server.js","scripts":{"start":"node server.js"},"engines":{"node":">=20"}}
