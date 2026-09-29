@@ -31,3 +31,6 @@ jobs:
           app-name: dirty-thoughts-fashion
           slot-name: Production
           package: .
+
+      - name: Restart Azure Web App
+        run: az webapp restart --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod
