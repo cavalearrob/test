@@ -21,7 +21,7 @@ http.createServer(async(req,res)=>{try{
     const price=enabled.length?Math.min(...enabled.map(v=>v.price)):null;
     const suffix=x.title.split(' — DTF ').pop();
     const category=suffix==='T-Shirt'?'T-Shirts':suffix==='Tank Top'?'Tank Tops':suffix==='Crop Top'?'Crop Tops':suffix==='Hoodie'?'Hoodies':suffix==='Sweatpant'?'Sweatpants':suffix==='Pantie'?'Panties':suffix;
-    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:x.images?.find(i=>i.is_default)?.src||x.images?.[0]?.src||null,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
+    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:x.images?.find(i=>i.is_default)?.src||x.images?.[0]?.src||null,images:(x.images||[]).slice(0,8).map(i=>({src:i.src,position:i.position||null,is_default:!!i.is_default,variant_ids:i.variant_ids||[]})),variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
   });
   return json(res,200,{ok:true,count:rows.length,products:rows});
  }
@@ -29,42 +29,7 @@ http.createServer(async(req,res)=>{try{
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to render artwork and create the 40 DTF products as Printify drafts. Existing matching titles are skipped.'});
   const out=await buildProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
  }
- if(p==='/api/printify/cost-probe'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to run a temporary six-product cost probe. Probe products and image are deleted/archived after costs are read.'});
-  const img=await printify('/uploads/images.json','POST',{file_name:'dtf-cost-probe.jpeg',url:'https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net/IMG_2953.jpeg'});
-  if(img.status>=400)return json(res,img.status,{ok:false,stage:'upload_probe_image',error:img.data});
-  const configs=[
-   {category:'T-Shirts',blueprint:6,provider:99,price:2899,position:'front'},
-   {category:'Tank Tops',blueprint:18,provider:99,price:2799,position:'front'},
-   {category:'Crop Tops',blueprint:411,provider:99,price:2699,position:'front'},
-   {category:'Hoodies',blueprint:77,provider:99,price:5499,position:'front'},
-   {category:'Sweatpants',blueprint:1398,provider:39,price:4999,position:'left_leg_front'},
-   {category:'Panties',blueprint:407,provider:14,price:2499,position:'front'}
-  ];
-  const results=[];
-  for(const cfg of configs){
-   let createdId=null;
-   try{
-    const vr=await printify('/catalog/blueprints/'+cfg.blueprint+'/print_providers/'+cfg.provider+'/variants.json?show-out-of-stock=0');
-    const variants=Array.isArray(vr.data)?vr.data:(Array.isArray(vr.data?.variants)?vr.data.variants:[]);
-    const allUsable=variants.filter(v=>(v.placeholders||[]).some(ph=>ph.position===cfg.position));
-    const usable=allUsable.slice(0,100);
-    if(!usable.length){results.push({...cfg,ok:false,error:'No usable in-stock variants'});continue}
-    const body={title:'DTF COST PROBE - '+cfg.category,description:'Temporary cost probe; safe to delete.',blueprint_id:cfg.blueprint,print_provider_id:cfg.provider,variants:usable.map(v=>({id:v.id,price:cfg.price,is_enabled:true})),print_areas:[{variant_ids:usable.map(v=>v.id),placeholders:[{position:cfg.position,images:[{id:img.data.id,x:0.5,y:0.5,scale:0.18,angle:0}]}]}]};
-    const cr=await printify('/shops/6647970/products.json','POST',body);
-    if(cr.status>=400){results.push({...cfg,ok:false,stage:'create',error:cr.data});continue}
-    createdId=cr.data.id;
-    const costs=(cr.data.variants||[]).map(v=>v.cost).filter(Number.isFinite);
-    const ship=await printify('/catalog/blueprints/'+cfg.blueprint+'/print_providers/'+cfg.provider+'/shipping.json');
-    const profiles=Array.isArray(ship.data?.profiles)?ship.data.profiles:[];
-    const us=profiles.filter(x=>(x.countries||[]).includes('US')).map(x=>({first_item_cents:x.first_item?.cost,additional_item_cents:x.additional_items?.cost,variant_count:(x.variant_ids||[]).length}));
-    results.push({category:cfg.category,blueprint_id:cfg.blueprint,provider_id:cfg.provider,ok:true,variant_count:(cr.data.variants||[]).length,min_cost_cents:costs.length?Math.min(...costs):null,max_cost_cents:costs.length?Math.max(...costs):null,retail_price_cents:cfg.price,us_shipping:us});
-   }catch(e){results.push({...cfg,ok:false,error:e.message})}
-   finally{if(createdId)await printify('/shops/6647970/products/'+createdId+'.json','DELETE')}
-  }
-  await printify('/uploads/'+img.data.id+'/archive.json','POST',{});
-  return json(res,200,{ok:results.every(x=>x.ok),note:'Temporary probe products were deleted and the probe image was archived.',results});
- }
+
  if(p==='/api/printify/dtf-analysis'){
   const candidates=[{id:6,category:'T-Shirts'},{id:18,category:'Tank Tops'},{id:411,category:'Crop Tops'},{id:77,category:'Hoodies'},{id:1398,category:'Sweatpants'},{id:407,category:'Panties'}];
   const global=await printify('/catalog/print_providers.json');
