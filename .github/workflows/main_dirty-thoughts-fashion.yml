@@ -54,8 +54,10 @@ jobs:
           set -e
           BASE="https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net"
           sleep 20
-          for START in 10 20 30; do
-            echo "Creating DTF products $((START+1))-$((START+10))"
-            curl --fail --show-error --max-time 300 "$BASE/api/printify/build-drafts?run=1&start=$START&count=10"
+          for START in 10 13 16 19 22 25 28 31 34 37; do
+            END=$((START+3))
+            if [ "$END" -gt 40 ]; then END=40; fi
+            echo "Creating DTF products $((START+1))-$END"
+            curl --fail --show-error --retry 2 --retry-delay 5 --retry-all-errors --max-time 210 "$BASE/api/printify/build-drafts?run=1&start=$START&count=3"
             echo
           done
