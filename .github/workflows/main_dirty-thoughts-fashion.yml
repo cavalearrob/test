@@ -1,6 +1,10 @@
 # Deploy the static Dirty Thoughts Fashion site to Azure App Service
 name: Deploy DTF site to Azure Web App
 
+concurrency:
+  group: dtf-production
+  cancel-in-progress: true
+
 on:
   push:
     branches:
