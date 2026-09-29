@@ -30,7 +30,8 @@ http.createServer(async(req,res)=>{try{
    try{
     const vr=await printify('/catalog/blueprints/'+cfg.blueprint+'/print_providers/'+cfg.provider+'/variants.json?show-out-of-stock=0');
     const variants=Array.isArray(vr.data)?vr.data:(Array.isArray(vr.data?.variants)?vr.data.variants:[]);
-    const usable=variants.filter(v=>(v.placeholders||[]).some(ph=>ph.position===cfg.position));
+    const allUsable=variants.filter(v=>(v.placeholders||[]).some(ph=>ph.position===cfg.position));
+    const usable=allUsable.slice(0,100);
     if(!usable.length){results.push({...cfg,ok:false,error:'No usable in-stock variants'});continue}
     const body={title:'DTF COST PROBE - '+cfg.category,description:'Temporary cost probe; safe to delete.',blueprint_id:cfg.blueprint,print_provider_id:cfg.provider,variants:usable.map(v=>({id:v.id,price:cfg.price,is_enabled:true})),print_areas:[{variant_ids:usable.map(v=>v.id),placeholders:[{position:cfg.position,images:[{id:img.data.id,x:0.5,y:0.5,scale:0.18,angle:0}]}]}]};
     const cr=await printify('/shops/6647970/products.json','POST',body);
