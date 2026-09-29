@@ -1,4 +1,4 @@
-const {buildProducts}=require('./build-products');
+const {buildProducts,repairProducts}=require('./build-products');
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const root=__dirname,port=process.env.PORT||8080;
 function json(res,code,obj){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(obj))}
@@ -24,6 +24,10 @@ http.createServer(async(req,res)=>{try{
     return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:x.images?.find(i=>i.is_default)?.src||x.images?.[0]?.src||null,images:(x.images||[]).slice(0,8).map(i=>({src:i.src,position:i.position||null,is_default:!!i.is_default,variant_ids:i.variant_ids||[]})),variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
   });
   return json(res,200,{ok:true,count:rows.length,products:rows});
+ }
+ if(p==='/api/printify/repair-artwork'){
+  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
+  const out=await repairProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
  }
  if(p==='/api/printify/build-drafts'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to render artwork and create the 40 DTF products as Printify drafts. Existing matching titles are skipped.'});
