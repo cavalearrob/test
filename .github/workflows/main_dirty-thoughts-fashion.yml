@@ -46,3 +46,16 @@ jobs:
 
       - name: Restart Azure Web App
         run: az webapp restart --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod
+
+      - name: Build remaining DTF Printify drafts
+        if: contains(github.event.head_commit.message, '[build-dtf]')
+        shell: bash
+        run: |
+          set -e
+          BASE="https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net"
+          sleep 20
+          for START in 10 20 30; do
+            echo "Creating DTF products $((START+1))-$((START+10))"
+            curl --fail --show-error --max-time 300 "$BASE/api/printify/build-drafts?run=1&start=$START&count=10"
+            echo
+          done
