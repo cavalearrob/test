@@ -1,4 +1,8 @@
 const sharp=require('sharp');
+const fs=require('fs');
+const fontkit=require('fontkit');
+let _font;
+function brandFont(){if(!_font){_font=fontkit.create(fs.readFileSync(require.resolve('@fontsource/inter/files/inter-latin-900-normal.woff2')))}return _font}
 
 const SHOP=6647970;
 const slogans=[
@@ -18,25 +22,39 @@ const cfg={
  'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black','Navy','Sport Grey'],scale:.68},
  'Panties':{blueprint:407,provider:14,price:3499,position:'front',colors:['Black stitching'],scale:1}
 };
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,55)}
 function lines(text,max=17){
  const words=text.replace(/ — /g,' ').split(/\s+/),out=[];let cur='';
  for(const w of words){if((cur+' '+w).trim().length>max&&cur){out.push(cur);cur=w}else cur=(cur+' '+w).trim()}
  if(cur)out.push(cur);return out.slice(0,5);
 }
+function vectorText(text,cx,baseline,size,fill,opts={}){
+ const font=brandFont(),run=font.layout(text),scale=size/font.unitsPerEm,spacing=opts.spacing||0;
+ const width=run.positions.reduce((n,p)=>n+p.xAdvance*scale+spacing,0)-spacing;
+ let x=cx-width/2,out='';
+ run.glyphs.forEach((g,i)=>{
+   const p=run.positions[i],d=g.path.toSVG(),tx=x+p.xOffset*scale,ty=baseline-p.yOffset*scale;
+   const sw=opts.strokeWidth?opts.strokeWidth/scale:0;
+   out+='<path d="'+d+'" transform="translate('+tx.toFixed(2)+' '+ty.toFixed(2)+') scale('+scale.toFixed(6)+' '+(-scale).toFixed(6)+')" fill="'+fill+'"'+(opts.stroke?' stroke="'+opts.stroke+'" stroke-width="'+sw.toFixed(2)+'" paint-order="stroke"':'')+'/>';
+   x+=p.xAdvance*scale+spacing;
+ });
+ return opts.rotate?'<g transform="rotate('+opts.rotate+' '+cx+' '+baseline+')">'+out+'</g>':out;
+}
 function artworkSvg(text,index,isAop=false){
- const W=4500,H=5400,pink='#ff2b8a',white='#ffffff',black='#0a0a0a';
- if(isAop){
-   const safe=esc(text);return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="100%" height="100%" fill="${black}"/><g font-family="DejaVu Sans,Arial,sans-serif" font-weight="900" text-anchor="middle"><text x="2250" y="700" font-size="300" fill="${pink}">DTF</text><text x="2250" y="1160" font-size="190" fill="${white}">DIRTY THOUGHTS FASHION</text><g transform="rotate(-12 2250 2800)"><text x="2250" y="2400" font-size="330" fill="${white}">${safe}</text><text x="2250" y="3000" font-size="260" fill="${pink}">GOOD GIRLS • DIRTIER THOUGHTS</text></g><text x="2250" y="4700" font-size="180" fill="${white}">WHAT DID YOU THINK DTF MEANT?</text></g></svg>`;
- }
+ const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#090909';
  const ls=lines(text,index%3===0?15:18),n=ls.length;
- const font=Math.max(330,Math.min(760,Math.floor(2500/Math.max(1,n))));
- const start=2450-((n-1)*font*.62)/2;
- const textEls=ls.map((l,j)=>`<text x="2250" y="${Math.round(start+j*font*.82)}" font-size="${font}" fill="${j%2?pink:white}" stroke="${j%2?white:pink}" stroke-width="14" paint-order="stroke">${esc(l)}</text>`).join('');
- const frame=index%4===1?`<rect x="360" y="520" width="3780" height="4300" rx="160" fill="none" stroke="${pink}" stroke-width="38"/>`:'';
- const slash=index%4===2?`<path d="M500 4300 L4000 1050" stroke="${pink}" stroke-width="70" opacity=".28"/>`:'';
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${frame}${slash}<g font-family="DejaVu Sans,Arial,sans-serif" font-weight="900" text-anchor="middle"><text x="2250" y="900" font-size="300" letter-spacing="35" fill="${pink}">D • T • F</text>${textEls}<text x="2250" y="4720" font-size="150" letter-spacing="12" fill="${white}">DIRTY THOUGHTS FASHION</text><text x="2250" y="5000" font-size="105" letter-spacing="8" fill="${pink}">WHAT DID YOU THINK DTF MEANT?</text></g></svg>`;
+ if(isAop){
+   const bg=index%2?pink:'#f5f2f4',ink=index%2?black:'#111111',accent=index%2?white:pink;
+   const slogan=lines(text,18),font=Math.max(300,Math.min(620,Math.floor(2100/Math.max(1,slogan.length))));
+   let body=slogan.map((l,j)=>vectorText(l,2250,2250+j*font*.88,font,j%2?accent:ink)).join('');
+   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+bg+'"/><path d="M0 650 L4500 0 M0 5400 L4500 4750" stroke="'+accent+'" stroke-width="180" opacity=".9"/>'+vectorText('DIRTY THOUGHTS',2250,720,360,ink,{spacing:22})+vectorText('FASHION',2250,1070,210,accent,{spacing:32})+body+vectorText('WHAT DID YOU THINK DTF MEANT?',2250,4700,190,ink,{spacing:10})+vectorText('DIRTY THOUGHTS FASHION',2250,5050,150,accent,{spacing:12})+'</svg>';
+ }
+ const font=Math.max(360,Math.min(760,Math.floor(2450/Math.max(1,n))));
+ const first=2250-((n-1)*font*.82)/2;
+ let body=ls.map((l,j)=>vectorText(l,2250,first+j*font*.82,font,j%2?pink:white,{stroke:j%2?white:pink,strokeWidth:12})).join('');
+ const frame=index%4===1?'<rect x="310" y="430" width="3880" height="4470" rx="150" fill="none" stroke="'+pink+'" stroke-width="34"/>':'';
+ const slash=index%4===2?'<path d="M420 4350 L4080 950" stroke="'+pink+'" stroke-width="70" opacity=".20"/>':'';
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+frame+slash+vectorText('DIRTY THOUGHTS',2250,720,330,pink,{spacing:22})+vectorText('FASHION',2250,1010,170,white,{spacing:34})+body+vectorText('WHAT DID YOU THINK DTF MEANT?',2250,4780,150,white,{spacing:8})+vectorText('DTF • DIRTY THOUGHTS FASHION',2250,5100,120,pink,{spacing:7})+'</svg>';
 }
 async function renderPng(text,index,isAop){return sharp(Buffer.from(artworkSvg(text,index,isAop))).png({compressionLevel:9,palette:true}).toBuffer()}
 function pickVariants(list,c){
@@ -80,4 +98,25 @@ async function buildProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts};
+async function repairProducts(printify,opts={}){
+ const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(5,Number(opts.count)||3)),end=Math.min(slogans.length,start+count);
+ const lr=await printify('/shops/'+SHOP+'/products.json?limit=50');
+ const products=(lr.data&&lr.data.data)||[],byTitle=new Map(products.map(p=>[p.title,p])),results=[];
+ for(let i=start;i<end;i++){
+   const text=slogans[i],category=plan[i],c=cfg[category],title=text+' — DTF '+category.replace(/s$/,'');
+   const p=byTitle.get(title);if(!p){results.push({index:i+1,title,ok:false,error:'Product not found'});continue}
+   try{
+     const enabled=(p.variants||[]).filter(v=>v.is_enabled),ids=enabled.map(v=>v.id);
+     const png=await renderPng(text,i,category==='Panties');
+     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-v2-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
+     if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',error:up.data});continue}
+     const placeholders=category==='Panties'?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]})):[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
+     const body={print_areas:[{variant_ids:ids,placeholders}]};
+     const ur=await printify('/shops/'+SHOP+'/products/'+p.id+'.json','PUT',body);
+     if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',error:ur.data});continue}
+     results.push({index:i+1,title,category,ok:true,id:p.id,artwork:'vector-v2',variants:ids.length});
+   }catch(e){results.push({index:i+1,title,ok:false,error:e.message})}
+ }
+ return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
+}
+module.exports={buildProducts,repairProducts};
