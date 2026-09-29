@@ -12,6 +12,31 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
+ if(p==='/api/printify/dtf-analysis'){
+  const candidates=[{id:6,category:'T-Shirts'},{id:18,category:'Tank Tops'},{id:411,category:'Crop Tops'},{id:77,category:'Hoodies'},{id:1398,category:'Sweatpants'},{id:407,category:'Panties'}];
+  const global=await printify('/catalog/print_providers.json');
+  const providerMap=new Map((Array.isArray(global.data)?global.data:[]).map(x=>[x.id,x]));
+  const products=[];
+  for(const item of candidates){
+   const bp=await printify('/catalog/blueprints/'+item.id+'.json');
+   const pr=await printify('/catalog/blueprints/'+item.id+'/print_providers.json');
+   const providers=[];
+   for(const pv of (Array.isArray(pr.data)?pr.data:[])){
+    const vr=await printify('/catalog/blueprints/'+item.id+'/print_providers/'+pv.id+'/variants.json');
+    if(vr.status!==200)continue;
+    const variants=Array.isArray(vr.data)?vr.data:(Array.isArray(vr.data?.variants)?vr.data.variants:[]);
+    const costs=variants.map(v=>v.cost).filter(Number.isFinite);
+    const sizes=[...new Set(variants.map(v=>v.options?.size).filter(Boolean))];
+    const colors=[...new Set(variants.map(v=>v.options?.color).filter(Boolean))];
+    const areas=[...new Set(variants.flatMap(v=>(v.placeholders||[]).map(a=>a.position)).filter(Boolean))];
+    const meta=providerMap.get(pv.id)||{};
+    providers.push({id:pv.id,title:pv.title,country:meta.location?.country||null,region:meta.location?.region||null,decoration_methods:pv.decoration_methods||[],variant_count:variants.length,min_cost_cents:costs.length?Math.min(...costs):null,max_cost_cents:costs.length?Math.max(...costs):null,sizes,colors,print_areas:areas});
+   }
+   providers.sort((a,b)=>(a.country==='US'?-1:1)-(b.country==='US'?-1:1)||(a.min_cost_cents??999999)-(b.min_cost_cents??999999));
+   products.push({category:item.category,blueprint_id:item.id,title:bp.data?.title,brand:bp.data?.brand,model:bp.data?.model,providers});
+  }
+  return json(res,200,{ok:true,products});
+ }
  if(p==='/api/printify/catalog-summary'){const r=await printify('/catalog/blueprints.json');if(r.status>=400)return json(res,200,{ok:false,upstreamStatus:r.status,message:'Printify catalog service returned an error after 3 attempts. Authentication is still connected.',upstream:r.data});const list=Array.isArray(r.data)?r.data:(Array.isArray(r.data?.data)?r.data.data:[]);const words=['shirt','tee','tank','tube','hood','sweat','jog','underwear','pant','brief'];const out=list.filter(x=>words.some(w=>(x.title||'').toLowerCase().includes(w))).map(x=>({id:x.id,title:x.title,brand:x.brand,model:x.model,images:x.images}));return json(res,200,{ok:true,count:out.length,products:out})}
  let filePath=p;if(filePath==='/')filePath='/index.html';const f=path.normalize(path.join(root,filePath));if(!f.startsWith(root))return json(res,403,{error:'forbidden'});fs.readFile(f,(e,d)=>{if(e){res.writeHead(404);return res.end('Not found')}res.writeHead(200,{'Content-Type':types[path.extname(f)]||'application/octet-stream'});res.end(d)})
  }catch(e){json(res,500,{ok:false,error:e.message})}}).listen(port,()=>console.log('DTF listening on '+port));
