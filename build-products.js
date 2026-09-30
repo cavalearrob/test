@@ -16,11 +16,11 @@ const slogans=[
 const productIds=["6abc14f6260c88028202a9c1","6abc1500bab7c171c90e2f4c","6abc150f6d4f888f2c043596","6abc151935a61a185c01f3c0","6abc1522c9018c5a7800bcc5","6abc152fa242b654f90d749c","6abc153dc9018c5a7800bccf","6abc154d7816221ec40a02f6","6abc15589b2bbab9840ca4a6","6abc15627816221ec40a030d","6abc189a6c23b4e9610bd171","6abc18a679dbacca490d138c","6abc18b0260c88028202ac30","6abc18c0d83811f59d05ba43","6abc18d61bfd33e859031d3d","6abc18e2bab7c171c90e313d","6abc18ee18395eee87051d79","6abc18f890ce5154a70423a5","6abc19096c23b4e9610bd19c","6abc191ad83811f59d05ba61","6abc19261bfd33e859031d57","6abc1939ecee919a4d0f93d2","6abc195becee919a4d0f93f2","6abc1969ecee919a4d0f9400","6abc19761bfd33e859031d8c","6abc1984c9018c5a7800bec9","6abc1992a242b654f90d775b","6abc19a0c9018c5a7800bef2","6abc19b26e660f7c7d072388","6abc19c6a242b654f90d7781","6abc19d6bd543ded3e01bd7f","6abc19e5f7710e1fdc03d4d0","6abc19fcbd543ded3e01bd9d","6abc1a133ada9325be0e42f5","6abc1a206e660f7c7d0723c2","6abc1a36a242b654f90d77d0","6abc1a44bab7c171c90e3235","6abc1a54a242b654f90d7801","6abc1a69f7710e1fdc03d59a","6abc1a8779dbacca490d1537"];
 const plan=[...Array(12).fill('T-Shirts'),...Array(7).fill('Tank Tops'),...Array(5).fill('Crop Tops'),...Array(6).fill('Hoodies'),...Array(5).fill('Sweatpants'),...Array(5).fill('Panties')];
 const cfg={
- 'T-Shirts':{blueprint:6,provider:99,price:2999,position:'front',colors:['Black','Dark Heather','Navy','Military Green'],scale:.78},
- 'Tank Tops':{blueprint:18,provider:99,price:2999,position:'front',colors:['Solid Black','Solid Midnight Navy','Solid Purple Rush'],scale:.78},
- 'Crop Tops':{blueprint:411,provider:99,price:3299,position:'front',colors:['Solid Black Blend','Dark Grey Heather','Heather Deep Teal','Heather True Royal'],scale:.76},
- 'Hoodies':{blueprint:77,provider:99,price:5999,position:'front',colors:['Black','Dark Heather','Navy','Military Green','Maroon'],scale:.72},
- 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black','Navy','Sport Grey'],scale:.68},
+ 'T-Shirts':{blueprint:6,provider:99,price:2999,position:'front',colors:['Black'],scale:.68},
+ 'Tank Tops':{blueprint:18,provider:99,price:2999,position:'front',colors:['Solid Black'],scale:.68},
+ 'Crop Tops':{blueprint:411,provider:99,price:3299,position:'front',colors:['Solid Black Blend'],scale:.66},
+ 'Hoodies':{blueprint:77,provider:99,price:5999,position:'front',colors:['Black'],scale:.62},
+ 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:.48},
  'Panties':{blueprint:407,provider:14,price:3499,position:'front',colors:['Black stitching'],scale:1}
 };
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,55)}
@@ -42,20 +42,24 @@ function vectorText(text,cx,baseline,size,fill,opts={}){
  return opts.rotate?'<g transform="rotate('+opts.rotate+' '+cx+' '+baseline+')">'+out+'</g>':out;
 }
 function artworkSvg(text,index,isAop=false){
- const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#090909';
- const ls=lines(text,index%3===0?15:18),n=ls.length;
+ const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505';
+ const pantyShort=['EXPENSIVE','NO FREE PREVIEWS','SOCIAL CLUB','MEMBERS ONLY','CLEAN FIT'];
  if(isAop){
-   const bg=index%2?pink:'#f5f2f4',ink=index%2?black:'#111111',accent=index%2?white:pink;
-   const slogan=lines(text,18),font=Math.max(300,Math.min(620,Math.floor(2100/Math.max(1,slogan.length))));
-   let body=slogan.map((l,j)=>vectorText(l,2250,2250+j*font*.88,font,j%2?accent:ink)).join('');
-   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+bg+'"/><path d="M0 650 L4500 0 M0 5400 L4500 4750" stroke="'+accent+'" stroke-width="180" opacity=".9"/>'+vectorText('DIRTY THOUGHTS',2250,720,360,ink,{spacing:22})+vectorText('FASHION',2250,1070,210,accent,{spacing:32})+body+vectorText('WHAT DID YOU THINK DTF MEANT?',2250,4700,190,ink,{spacing:10})+vectorText('DIRTY THOUGHTS FASHION',2250,5050,150,accent,{spacing:12})+'</svg>';
+   const short=pantyShort[Math.max(0,index-35)]||'BAD IDEA';
+   // Mostly-black AOP: small, centered phrase so the garment cut does not crop the design.
+   const heart='<path d="M2250 1670 C2100 1480 1770 1510 1770 1815 C1770 2110 2250 2390 2250 2390 C2250 2390 2730 2110 2730 1815 C2730 1510 2400 1480 2250 1670Z" fill="none" stroke="'+pink+'" stroke-width="70"/>';
+   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart+vectorText(short,2250,3300,Math.min(520,3600/Math.max(6,short.length)),white,{spacing:8})+'<path d="M1550 3560 L2950 3560" stroke="'+pink+'" stroke-width="52" stroke-linecap="round"/></svg>';
  }
- const font=Math.max(360,Math.min(760,Math.floor(2450/Math.max(1,n))));
+ const ls=lines(text,index%3===0?15:18),n=ls.length;
+ const font=Math.max(360,Math.min(720,Math.floor(2300/Math.max(1,n))));
  const first=2250-((n-1)*font*.82)/2;
- let body=ls.map((l,j)=>vectorText(l,2250,first+j*font*.82,font,j%2?pink:white,{stroke:j%2?white:pink,strokeWidth:12})).join('');
- const frame=index%4===1?'<rect x="310" y="430" width="3880" height="4470" rx="150" fill="none" stroke="'+pink+'" stroke-width="34"/>':'';
- const slash=index%4===2?'<path d="M420 4350 L4080 950" stroke="'+pink+'" stroke-width="70" opacity=".20"/>':'';
- return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+frame+slash+vectorText('DIRTY THOUGHTS',2250,720,330,pink,{spacing:22})+vectorText('FASHION',2250,1010,170,white,{spacing:34})+body+vectorText('WHAT DID YOU THINK DTF MEANT?',2250,4780,150,white,{spacing:8})+vectorText('DTF • DIRTY THOUGHTS FASHION',2250,5100,120,pink,{spacing:7})+'</svg>';
+ let body=ls.map((l,j)=>vectorText(l,2250,first+j*font*.82,font,j%2?pink:white)).join('');
+ const accent=index%3===0
+   ?'<path d="M1100 3650 Q2250 4050 3400 3650" fill="none" stroke="'+pink+'" stroke-width="58" stroke-linecap="round"/>'
+   :index%3===1
+   ?'<path d="M1450 1400 L3050 1400 M1450 3800 L3050 3800" stroke="'+pink+'" stroke-width="46" stroke-linecap="round"/>'
+   :'<path d="M1450 1500 C1700 1200 2050 1200 2250 1500 C2450 1200 2800 1200 3050 1500" fill="none" stroke="'+pink+'" stroke-width="48"/>';
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+accent+body+'</svg>';
 }
 async function renderPng(text,index,isAop){return sharp(Buffer.from(artworkSvg(text,index,isAop))).png({compressionLevel:9,palette:true}).toBuffer()}
 function pickVariants(list,c){
@@ -101,21 +105,32 @@ async function buildProducts(printify,opts={}){
 }
 async function repairProducts(printify,opts={}){
  const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(2,Number(opts.count)||1)),end=Math.min(slogans.length,start+count),results=[];
+ const blackName=t=>{
+   const color=String(t||'').split('/')[0].trim().toLowerCase();
+   return color==='black'||color==='solid black'||color==='solid black blend'||color==='black stitching';
+ };
  for(let i=start;i<end;i++){
    const text=slogans[i],category=plan[i],c=cfg[category],id=productIds[i],title=text+' — DTF '+category.replace(/s$/,'');
    if(!id){results.push({index:i+1,title,ok:false,error:'Missing product id'});continue}
    try{
      const pr=await printify('/shops/'+SHOP+'/products/'+id+'.json');
      if(pr.status>=400){results.push({index:i+1,title,ok:false,stage:'fetch',status:pr.status,error:pr.data});continue}
-     const enabled=(pr.data.variants||[]).filter(v=>v.is_enabled),variantIds=enabled.map(v=>v.id);
-     if(!variantIds.length){results.push({index:i+1,title,ok:false,error:'No enabled variants'});continue}
+     const variants=pr.data.variants||[],allIds=variants.map(v=>v.id),black=variants.filter(v=>blackName(v.title));
+     if(!allIds.length||!black.length){results.push({index:i+1,title,ok:false,error:'No black variants available'});continue}
      const png=await renderPng(text,i,category==='Panties');
-     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-v3-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
+     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-clean-v4-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
      if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',status:up.status,error:up.data});continue}
-     const placeholders=category==='Panties'?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]})):[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
-     const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',{print_areas:[{variant_ids:variantIds,placeholders}]});
+     const placeholders=category==='Panties'
+       ?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]}))
+       :[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
+     const body={
+       description:'[DTF-CLEAN-V4] '+text+' — black garment with original quote/graphic artwork. No brand logo on the garment.',
+       variants:variants.map(v=>({id:v.id,price:v.price||c.price,is_enabled:blackName(v.title)})),
+       print_areas:[{variant_ids:allIds,placeholders}]
+     };
+     const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',body);
      if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',status:ur.status,error:ur.data});continue}
-     results.push({index:i+1,title,category,ok:true,id,artwork:'vector-v3',variants:variantIds.length});
+     results.push({index:i+1,title,category,ok:true,id,artwork:'clean-v4',black_variants:black.length});
    }catch(e){results.push({index:i+1,title,ok:false,error:e.message})}
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
