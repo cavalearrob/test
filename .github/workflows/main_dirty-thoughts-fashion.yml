@@ -72,11 +72,14 @@ jobs:
           FAIL=0
           for START in $(seq 0 39); do
             echo "Repairing DTF product $((START+1))/40"
-            curl --fail --show-error --retry 1 --retry-delay 5 --retry-all-errors --max-time 150 "$BASE/api/printify/repair-artwork?run=1&start=$START&count=1"
+            RESP=$(curl --fail --show-error --retry 1 --retry-delay 5 --retry-all-errors --max-time 150 "$BASE/api/printify/repair-artwork?run=1&start=$START&count=1")
             CODE=$?
-            echo
+            echo "$RESP"
             if [ "$CODE" -ne 0 ]; then
-              echo "::warning::Product $((START+1)) repair failed with curl exit $CODE; continuing."
+              echo "::warning::Product $((START+1)) request failed with curl exit $CODE; continuing."
+              FAIL=1
+            elif ! echo "$RESP" | jq -e '.ok == true' >/dev/null 2>&1; then
+              echo "::warning::Product $((START+1)) returned an application-level repair failure; continuing."
               FAIL=1
             fi
           done
