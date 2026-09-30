@@ -16,19 +16,21 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/store/catalog'){
   const r=await printify('/shops/6647970/products.json?limit=50');
   if(r.status>=400)return json(res,r.status,{ok:false,error:r.data});
-  const palette=['Navy','Military Green','Dark Heather','Maroon','Purple','Royal','Teal','Mauve','Sport Grey','Sand','White','Black'];
-  const rows=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF ')).map((x,idx)=>{
+  const source=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF '));
+  const clean=source.filter(x=>String(x.description||'').includes('[DTF-CLEAN-V4]'));
+  const rows=clean.map(x=>{
     const enabled=(x.variants||[]).filter(v=>v.is_enabled);
     const price=enabled.length?Math.min(...enabled.map(v=>v.price)):null;
     const suffix=x.title.split(' — DTF ').pop();
     const category=suffix==='T-Shirt'?'T-Shirts':suffix==='Tank Top'?'Tank Tops':suffix==='Crop Top'?'Crop Tops':suffix==='Hoodie'?'Hoodies':suffix==='Sweatpant'?'Sweatpants':suffix==='Pantie'?'Panties':suffix;
-    const wanted=palette[idx%palette.length],heroVariant=enabled.find(v=>v.title&&v.title.toLowerCase().includes(wanted.toLowerCase()))||enabled[idx%Math.max(1,enabled.length)];
-    const hero=(x.images||[]).find(im=>heroVariant&&(im.variant_ids||[]).includes(heroVariant.id)&&im.position!=='back')||(x.images||[]).find(im=>heroVariant&&(im.variant_ids||[]).includes(heroVariant.id))||(x.images||[]).find(im=>im.is_default)||(x.images||[])[0];
-    const seen=new Set(),gallery=[];for(const v of enabled){const key=(v.title||'').split('/')[0].trim();if(seen.has(key))continue;const im=(x.images||[]).find(z=>(z.variant_ids||[]).includes(v.id)&&z.position!=='back')||(x.images||[]).find(z=>(z.variant_ids||[]).includes(v.id));if(im){seen.add(key);gallery.push({src:im.src,position:im.position||null,is_default:!!im.is_default,variant_ids:im.variant_ids||[]});if(gallery.length>=6)break}}
-    if(hero&&!gallery.some(g=>g.src===hero.src))gallery.unshift({src:hero.src,position:hero.position||null,is_default:!!hero.is_default,variant_ids:hero.variant_ids||[]});
-    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero?.src||null,images:gallery,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
-  });
-  return json(res,200,{ok:true,count:rows.length,products:rows});
+    const black=enabled.find(v=>/^\s*(solid black blend|solid black|black stitching|black)\s*\//i.test(v.title||''))||enabled[0];
+    const hero=(x.images||[]).find(im=>black&&(im.variant_ids||[]).includes(black.id)&&im.position!=='back')||(x.images||[]).find(im=>black&&(im.variant_ids||[]).includes(black.id))||(x.images||[]).find(im=>im.is_default)||(x.images||[])[0];
+    if(!hero||!hero.src||!enabled.length)return null;
+    const gallery=(x.images||[]).filter(im=>black&&(im.variant_ids||[]).includes(black.id)).slice(0,6).map(im=>({src:im.src,position:im.position||null,is_default:!!im.is_default,variant_ids:im.variant_ids||[]}));
+    if(!gallery.length)gallery.push({src:hero.src,position:hero.position||null,is_default:!!hero.is_default,variant_ids:hero.variant_ids||[]});
+    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero.src,images:gallery,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
+  }).filter(Boolean);
+  return json(res,200,{ok:true,total:source.length,clean_count:clean.length,count:rows.length,refreshing:rows.length<source.length,products:rows});
  }
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
