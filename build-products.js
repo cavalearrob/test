@@ -13,6 +13,7 @@ const slogans=[
 "PREMIUM ACCESS","GOOD TIPS, BAD IDEAS","EXCLUSIVE CONTENT","MAIN CHARACTER AFTER DARK","YOUR CRUSH SUBSCRIBES","DRESS CODE: EXPENSIVE",
 "NO FREE PREVIEWS","DTF SOCIAL CLUB","MEMBERS ONLY ENERGY","DIRTY THOUGHTS — CLEAN FIT"
 ];
+const productIds=["6abc14f6260c88028202a9c1","6abc1500bab7c171c90e2f4c","6abc150f6d4f888f2c043596","6abc151935a61a185c01f3c0","6abc1522c9018c5a7800bcc5","6abc152fa242b654f90d749c","6abc153dc9018c5a7800bccf","6abc154d7816221ec40a02f6","6abc15589b2bbab9840ca4a6","6abc15627816221ec40a030d","6abc189a6c23b4e9610bd171","6abc18a679dbacca490d138c","6abc18b0260c88028202ac30","6abc18c0d83811f59d05ba43","6abc18d61bfd33e859031d3d","6abc18e2bab7c171c90e313d","6abc18ee18395eee87051d79","6abc18f890ce5154a70423a5","6abc19096c23b4e9610bd19c","6abc191ad83811f59d05ba61","6abc19261bfd33e859031d57","6abc1939ecee919a4d0f93d2","6abc195becee919a4d0f93f2","6abc1969ecee919a4d0f9400","6abc19761bfd33e859031d8c","6abc1984c9018c5a7800bec9","6abc1992a242b654f90d775b","6abc19a0c9018c5a7800bef2","6abc19b26e660f7c7d072388","6abc19c6a242b654f90d7781","6abc19d6bd543ded3e01bd7f","6abc19e5f7710e1fdc03d4d0","6abc19fcbd543ded3e01bd9d","6abc1a133ada9325be0e42f5","6abc1a206e660f7c7d0723c2","6abc1a36a242b654f90d77d0","6abc1a44bab7c171c90e3235","6abc1a54a242b654f90d7801","6abc1a69f7710e1fdc03d59a","6abc1a8779dbacca490d1537"];
 const plan=[...Array(12).fill('T-Shirts'),...Array(7).fill('Tank Tops'),...Array(5).fill('Crop Tops'),...Array(6).fill('Hoodies'),...Array(5).fill('Sweatpants'),...Array(5).fill('Panties')];
 const cfg={
  'T-Shirts':{blueprint:6,provider:99,price:2999,position:'front',colors:['Black','Dark Heather','Navy','Military Green'],scale:.78},
@@ -99,22 +100,22 @@ async function buildProducts(printify,opts={}){
  return {ok:results.every(x=>x.ok),start:start+1,end,created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
 }
 async function repairProducts(printify,opts={}){
- const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(5,Number(opts.count)||3)),end=Math.min(slogans.length,start+count);
- const lr=await printify('/shops/'+SHOP+'/products.json?limit=50');
- const products=(lr.data&&lr.data.data)||[],byTitle=new Map(products.map(p=>[p.title,p])),results=[];
+ const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(2,Number(opts.count)||1)),end=Math.min(slogans.length,start+count),results=[];
  for(let i=start;i<end;i++){
-   const text=slogans[i],category=plan[i],c=cfg[category],title=text+' — DTF '+category.replace(/s$/,'');
-   const p=byTitle.get(title);if(!p){results.push({index:i+1,title,ok:false,error:'Product not found'});continue}
+   const text=slogans[i],category=plan[i],c=cfg[category],id=productIds[i],title=text+' — DTF '+category.replace(/s$/,'');
+   if(!id){results.push({index:i+1,title,ok:false,error:'Missing product id'});continue}
    try{
-     const enabled=(p.variants||[]).filter(v=>v.is_enabled),ids=enabled.map(v=>v.id);
+     const pr=await printify('/shops/'+SHOP+'/products/'+id+'.json');
+     if(pr.status>=400){results.push({index:i+1,title,ok:false,stage:'fetch',status:pr.status,error:pr.data});continue}
+     const enabled=(pr.data.variants||[]).filter(v=>v.is_enabled),variantIds=enabled.map(v=>v.id);
+     if(!variantIds.length){results.push({index:i+1,title,ok:false,error:'No enabled variants'});continue}
      const png=await renderPng(text,i,category==='Panties');
-     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-v2-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
-     if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',error:up.data});continue}
+     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-v3-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
+     if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',status:up.status,error:up.data});continue}
      const placeholders=category==='Panties'?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]})):[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
-     const body={print_areas:[{variant_ids:ids,placeholders}]};
-     const ur=await printify('/shops/'+SHOP+'/products/'+p.id+'.json','PUT',body);
-     if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',error:ur.data});continue}
-     results.push({index:i+1,title,category,ok:true,id:p.id,artwork:'vector-v2',variants:ids.length});
+     const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',{print_areas:[{variant_ids:variantIds,placeholders}]});
+     if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',status:ur.status,error:ur.data});continue}
+     results.push({index:i+1,title,category,ok:true,id,artwork:'vector-v3',variants:variantIds.length});
    }catch(e){results.push({index:i+1,title,ok:false,error:e.message})}
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
