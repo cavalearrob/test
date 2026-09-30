@@ -29,9 +29,13 @@ function lines(text,max=17){
  for(const w of words){if((cur+' '+w).trim().length>max&&cur){out.push(cur);cur=w}else cur=(cur+' '+w).trim()}
  if(cur)out.push(cur);return out.slice(0,5);
 }
+function textWidth(text,size,spacing=0){
+ const font=brandFont(),run=font.layout(text),scale=size/font.unitsPerEm;
+ return run.positions.reduce((n,p)=>n+p.xAdvance*scale+spacing,0)-Math.max(0,spacing);
+}
 function vectorText(text,cx,baseline,size,fill,opts={}){
  const font=brandFont(),run=font.layout(text),scale=size/font.unitsPerEm,spacing=opts.spacing||0;
- const width=run.positions.reduce((n,p)=>n+p.xAdvance*scale+spacing,0)-spacing;
+ const width=textWidth(text,size,spacing);
  let x=cx-width/2,out='';
  run.glyphs.forEach((g,i)=>{
    const p=run.positions[i],d=g.path.toSVG(),tx=x+p.xOffset*scale,ty=baseline-p.yOffset*scale;
@@ -41,25 +45,48 @@ function vectorText(text,cx,baseline,size,fill,opts={}){
  });
  return opts.rotate?'<g transform="rotate('+opts.rotate+' '+cx+' '+baseline+')">'+out+'</g>':out;
 }
+function fitText(text,cx,baseline,wanted,maxWidth,fill,opts={}){
+ let size=wanted,width=textWidth(text,size,opts.spacing||0);
+ if(width>maxWidth)size*=maxWidth/width;
+ return vectorText(text,cx,baseline,size,fill,opts);
+}
+function heart(cx,cy,s,fill,stroke='none',sw=0){
+ const x=cx,y=cy;
+ return '<path d="M '+x+' '+(y+s*.30)+' C '+(x-s*.58)+' '+(y-s*.12)+', '+(x-s*.55)+' '+(y-s*.72)+', '+x+' '+(y-s*.43)+' C '+(x+s*.55)+' '+(y-s*.72)+', '+(x+s*.58)+' '+(y-s*.12)+', '+x+' '+(y+s*.30)+' Z" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
 function artworkSvg(text,index,isAop=false){
- const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505';
+ const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505',cx=2250;
  const pantyShort=['EXPENSIVE','NO FREE PREVIEWS','SOCIAL CLUB','MEMBERS ONLY','CLEAN FIT'];
  if(isAop){
    const short=pantyShort[Math.max(0,index-35)]||'BAD IDEA';
-   // Mostly-black AOP: small, centered phrase so the garment cut does not crop the design.
-   const heart='<path d="M2250 1670 C2100 1480 1770 1510 1770 1815 C1770 2110 2250 2390 2250 2390 C2250 2390 2730 2110 2730 1815 C2730 1510 2400 1480 2250 1670Z" fill="none" stroke="'+pink+'" stroke-width="70"/>';
-   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart+vectorText(short,2250,3300,Math.min(520,3600/Math.max(6,short.length)),white,{spacing:8})+'<path d="M1550 3560 L2950 3560" stroke="'+pink+'" stroke-width="52" stroke-linecap="round"/></svg>';
+   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart(cx,1900,620,pink)+fitText(short,cx,3100,520,3000,white,{spacing:5})+'<path d="M1450 3420 L3050 3420" stroke="'+pink+'" stroke-width="55" stroke-linecap="round"/></svg>';
  }
- const ls=lines(text,index%3===0?15:18),n=ls.length;
- const font=Math.max(360,Math.min(720,Math.floor(2300/Math.max(1,n))));
- const first=2250-((n-1)*font*.82)/2;
- let body=ls.map((l,j)=>vectorText(l,2250,first+j*font*.82,font,j%2?pink:white)).join('');
- const accent=index%3===0
-   ?'<path d="M1100 3650 Q2250 4050 3400 3650" fill="none" stroke="'+pink+'" stroke-width="58" stroke-linecap="round"/>'
-   :index%3===1
-   ?'<path d="M1450 1400 L3050 1400 M1450 3800 L3050 3800" stroke="'+pink+'" stroke-width="46" stroke-linecap="round"/>'
-   :'<path d="M1450 1500 C1700 1200 2050 1200 2250 1500 C2450 1200 2800 1200 3050 1500" fill="none" stroke="'+pink+'" stroke-width="48"/>';
- return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+accent+body+'</svg>';
+ let art='';
+ // Restore the original visual language from IMG_2954–IMG_2959:
+ // clean centered type, hot-pink hearts/ornaments, no random smile lines.
+ if(index===0){
+   art=fitText('YOUR BOYFRIEND',cx,2200,620,3200,white)+fitText('FOLLOWS ME',cx,2860,720,3000,pink)+heart(cx,3450,360,pink);
+ }else if(index===1){
+   art=fitText('TIPS ARE MY',cx,2200,650,3000,white)+fitText('LOVE LANGUAGE',cx,2860,650,3200,white)+heart(cx,3450,360,pink);
+ }else if(index===2){
+   art=fitText('CONTENT CREATOR',cx,1900,620,3300,white)+
+       '<path d="M900 2420 L3600 2420 M1050 2300 L900 2420 L1050 2540 M3450 2300 L3600 2420 L3450 2540" fill="none" stroke="'+pink+'" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>'+
+       heart(cx,2420,230,pink)+fitText("DON'T ASK",cx,3100,610,2800,white)+fitText('WHAT KIND',cx,3690,610,2800,white)+heart(cx,4210,300,pink);
+ }else if(index===3){
+   art=fitText("YES, IT'S A",cx,2200,650,2900,white)+fitText('REAL JOB',cx,2900,760,2600,pink)+heart(cx,3550,380,'none',pink,55);
+ }else if(index===4){
+   art=fitText('DTF',cx,2750,1450,2700,pink,{spacing:-10})+fitText('DIRTY THOUGHTS FASHION',cx,3400,330,3000,white,{spacing:8});
+ }else{
+   const ls=lines(text,16),n=ls.length;
+   const gap=n<=2?760:n===3?650:560;
+   const first=2500-((n-1)*gap)/2;
+   art=ls.map((l,j)=>fitText(l,cx,first+j*gap,j===n-1?690:620,3100,j===n-1&&index%2===0?pink:white,{spacing:2})).join('');
+   if(index%4===0)art+=heart(cx,first+n*gap+120,320,pink);
+   else if(index%4===1)art+='<path d="M1250 '+(first+n*gap+80)+' L3250 '+(first+n*gap+80)+'" stroke="'+pink+'" stroke-width="50" stroke-linecap="round"/>';
+   else if(index%4===2)art+=heart(cx,first+n*gap+100,300,'none',pink,52);
+   else art+='<path d="M1450 '+(first+n*gap+80)+' Q2250 '+(first+n*gap+420)+' 3050 '+(first+n*gap+80)+'" fill="none" stroke="'+pink+'" stroke-width="48" stroke-linecap="round"/>';
+ }
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+art+'</svg>';
 }
 async function renderPng(text,index,isAop){return sharp(Buffer.from(artworkSvg(text,index,isAop))).png({compressionLevel:9,palette:true}).toBuffer()}
 function pickVariants(list,c){
@@ -120,21 +147,21 @@ async function repairProducts(printify,opts={}){
      const black=i>=35 ? variants : variants.filter(v=>blackName(v.title,category));
      if(!allIds.length||!black.length){results.push({index:i+1,title,ok:false,error:'No black variants available'});continue}
      const png=await renderPng(text,i,category==='Panties');
-     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-clean-v4-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
+     const up=await printify('/uploads/images.json','POST',{file_name:'dtf-original-v5-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
      if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',status:up.status,error:up.data});continue}
      const placeholders=category==='Panties'
        ?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]}))
        :[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
      const body={
-       description:'[DTF-CLEAN-V4] '+text+' — black garment with original quote/graphic artwork. No brand logo on the garment.',
+             description:'[DTF-ORIGINAL-V5] '+text+' — restored Dirty Thoughts Fashion original-look quote/graphic artwork.',
        variants:variants.map(v=>({id:v.id,price:v.price||c.price,is_enabled:i>=35 ? true : blackName(v.title,category)})),
        print_areas:[{variant_ids:allIds,placeholders}]
      };
      const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',body);
      if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',status:ur.status,error:ur.data});continue}
-     results.push({index:i+1,title,category,ok:true,id,artwork:'clean-v4',black_variants:black.length});
+     results.push({index:i+1,title,category,ok:true,id,artwork:'original-look-v5',black_variants:black.length});
    }catch(e){results.push({index:i+1,title,ok:false,error:e.message})}
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,repairProducts,BUILD_VERSION:'clean-v4-panty-force-all'};
+module.exports={buildProducts,repairProducts,BUILD_VERSION:'original-look-v5'};
