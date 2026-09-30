@@ -1,26 +1,48 @@
-const slogans=["YOUR BOYFRIEND FOLLOWS ME","TIPS ARE MY LOVE LANGUAGE","CONTENT CREATOR — DON'T ASK WHAT KIND","YES, IT'S A REAL JOB.","DTF — DIRTY THOUGHTS FASHION","GOOD GIRLS. DIRTY THOUGHTS.","I'M THE REASON HE CLEARS HIS HISTORY","PAY ME, DON'T PLAY ME","SUBSCRIBE OR STAY CURIOUS","PRETTY EXPENSIVE","TIP FIRST. TALK LATER.","PRIVATE CONTENT. PUBLIC PROBLEM.","MY DMS HAVE A COVER CHARGE","NOT YOUR GIRL NEXT DOOR","BAD INFLUENCE","OFF THE CLOCK. STILL A PROBLEM.","I MAKE RENT LOOK EASY","CREATOR MODE: ALWAYS ON","SORRY, I'M BOOKED","YOUR FAVORITE BAD DECISION","HANDLE WITH TIPS","DTF AFTER DARK","DON'T FALL IN LOVE","PAID ATTENTION ONLY","MAKE IT WORTH MY WHILE","DIRTY THOUGHTS CLUB","TOO HOT FOR YOUR ALGORITHM","VIEW AT YOUR OWN RISK","FANTASY DEPARTMENT","I'M NOT FLIRTING. I'M NETWORKING.","PREMIUM ACCESS","GOOD TIPS, BAD IDEAS","EXCLUSIVE CONTENT","MAIN CHARACTER AFTER DARK","YOUR CRUSH SUBSCRIBES","DRESS CODE: EXPENSIVE","NO FREE PREVIEWS","DTF SOCIAL CLUB","MEMBERS ONLY ENERGY","DIRTY THOUGHTS — CLEAN FIT"];
-const plan=[...Array(12).fill("T-Shirts"),...Array(7).fill("Tank Tops"),...Array(5).fill("Crop Tops"),...Array(6).fill("Hoodies"),...Array(5).fill("Sweatpants"),...Array(5).fill("Panties")];
-const prices={"T-Shirts":29.99,"Tank Tops":29.99,"Crop Tops":32.99,"Hoodies":59.99,"Sweatpants":59.99,"Panties":34.99};
-const imgs=["IMG_2954.jpeg","IMG_2955.jpeg","IMG_2956.jpeg","IMG_2957.jpeg","IMG_2958.jpeg","IMG_2959.jpeg"];
-let products=slogans.map((s,i)=>({id:i+1,name:s,type:plan[i],price:prices[plan[i]],img:i<6?imgs[i]:null,printifyId:null,variants:[]}));
-let filter="All",cart=[];const grid=document.querySelector("#products"),filters=document.querySelector("#filters");
-["All","T-Shirts","Tank Tops","Crop Tops","Hoodies","Sweatpants","Panties"].forEach(x=>{let b=document.createElement("button");b.textContent=x;b.className=x==="All"?"active":"";b.onclick=()=>{filter=x;[...filters.children].forEach(y=>y.classList.toggle("active",y===b));render()};filters.appendChild(b)});
+let products=[],filter="All",cart=[];
+const grid=document.querySelector("#products"),filters=document.querySelector("#filters");
+const status=document.createElement("div");status.id="catalogStatus";status.className="catalogStatus";grid.before(status);
+
 function money(n){return "$"+Number(n).toFixed(2)}
-function render(){grid.innerHTML="";products.filter(p=>filter==="All"||p.type===filter).forEach(p=>{let a=document.createElement("article");a.className="product";a.innerHTML='<div class="pic" '+(p.img?'style="background-image:url(\''+p.img+'\')"':'')+'><span class="type">'+p.type+'</span>'+(!p.img?'<div class="slogan">'+p.name+'</div>':'')+'</div><div class="productInfo"><h3>'+p.name+'</h3><p>'+p.type+' • DTF creator collection</p><div class="priceRow"><strong>'+money(p.price)+'</strong><button>'+(p.variants.length?'CHOOSE OPTIONS':'VIEW')+'</button></div></div>';a.querySelector("button").onclick=()=>openProduct(p);a.querySelector(".pic").onclick=()=>openProduct(p);grid.appendChild(a)})}
+function setStatus(msg,kind=""){status.className="catalogStatus "+kind;status.textContent=msg}
+function buildFilters(){
+ const types=["All",...new Set(products.map(p=>p.type))];
+ filters.innerHTML="";
+ types.forEach(x=>{const b=document.createElement("button");b.textContent=x;b.className=x===filter?"active":"";b.onclick=()=>{filter=x;buildFilters();render()};filters.appendChild(b)});
+}
+function render(){
+ grid.innerHTML="";
+ const rows=products.filter(p=>(filter==="All"||p.type===filter)&&p.img&&p.variants.length);
+ if(!rows.length){grid.innerHTML='<div class="catalogEmpty">Clean product mockups are being regenerated. Only approved black-garment designs will appear here.</div>';return}
+ rows.forEach(p=>{
+   const a=document.createElement("article");a.className="product";
+   a.innerHTML='<div class="pic" style="background-image:url(\''+p.img+'\')"><span class="type">'+p.type+'</span></div><div class="productInfo"><h3>'+p.name+'</h3><p>'+p.type+' • black garment • quote/graphic design</p><div class="priceRow"><strong>'+money(p.price)+'</strong><button>CHOOSE OPTIONS</button></div></div>';
+   a.querySelector("button").onclick=()=>openProduct(p);a.querySelector(".pic").onclick=()=>openProduct(p);grid.appendChild(a);
+ });
+}
 function openProduct(p){
  const modal=document.querySelector("#productModal"),img=document.querySelector("#modalImg"),thumbs=document.querySelector("#modalThumbs"),sel=document.querySelector("#variantSelect");
  document.querySelector("#modalType").textContent=p.type;document.querySelector("#modalName").textContent=p.name;document.querySelector("#modalPrice").textContent=money(p.price);
- const images=(p.images&&p.images.length?p.images:[{src:p.img}]).filter(x=>x&&x.src);img.src=images[0]?.src||p.img||"";thumbs.innerHTML="";
- images.slice(0,5).forEach((x,i)=>{const b=document.createElement("button");b.className=i===0?"active":"";b.innerHTML='<img src="'+x.src+'" alt="">';b.onclick=()=>{img.src=x.src;[...thumbs.children].forEach(y=>y.classList.toggle("active",y===b))};thumbs.appendChild(b)});
- sel.innerHTML="";if(p.variants.length){p.variants.forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.title;o.dataset.price=v.price_cents;sel.appendChild(o)});sel.disabled=false}else{const o=document.createElement("option");o.textContent="Options loading";sel.appendChild(o);sel.disabled=true}
- const add=document.querySelector("#modalAdd");add.disabled=!p.variants.length;add.textContent=p.variants.length?"ADD TO BAG":"OPTIONS LOADING";add.onclick=()=>{const v=p.variants.find(x=>String(x.id)===sel.value);if(v){addToCart(p,v);closeProduct()}};
+ const images=(p.images||[]).filter(x=>x&&x.src);img.src=images[0]?.src||p.img;thumbs.innerHTML="";
+ images.slice(0,6).forEach((x,i)=>{const b=document.createElement("button");b.className=i===0?"active":"";b.innerHTML='<img src="'+x.src+'" alt="">';b.onclick=()=>{img.src=x.src;[...thumbs.children].forEach(y=>y.classList.toggle("active",y===b))};thumbs.appendChild(b)});
+ sel.innerHTML="";p.variants.forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.title;o.dataset.price=v.price_cents;sel.appendChild(o)});
+ const add=document.querySelector("#modalAdd");add.disabled=!p.variants.length;add.textContent="ADD TO BAG";add.onclick=()=>{const v=p.variants.find(x=>String(x.id)===sel.value);if(v){addToCart(p,v);closeProduct()}};
  modal.classList.add("open");document.querySelector("#productShade").classList.add("open");document.body.classList.add("locked");
 }
 function closeProduct(){document.querySelector("#productModal").classList.remove("open");document.querySelector("#productShade").classList.remove("open");document.body.classList.remove("locked")}
 function addToCart(p,v){cart.push({product:p,variant:v});document.querySelector("#count").textContent=cart.length;drawCart();openCart()}
 function drawCart(){document.querySelector("#cartItems").innerHTML=cart.map((x,i)=>'<div class="cartItem"><span>'+x.product.name+'<br><small>'+x.variant.title+'</small></span><span>'+money(x.variant.price_cents/100)+'　<a href="#" data-r="'+i+'">×</a></span></div>').join("");document.querySelector("#subtotal").textContent=money(cart.reduce((a,x)=>a+x.variant.price_cents/100,0));document.querySelectorAll("[data-r]").forEach(a=>a.onclick=e=>{e.preventDefault();cart.splice(+a.dataset.r,1);document.querySelector("#count").textContent=cart.length;drawCart()})}
-function openCart(){document.querySelector("#drawer").classList.add("open");document.querySelector("#shade").classList.add("open")}function closeCart(){document.querySelector("#drawer").classList.remove("open");document.querySelector("#shade").classList.remove("open")}
+function openCart(){document.querySelector("#drawer").classList.add("open");document.querySelector("#shade").classList.add("open")}
+function closeCart(){document.querySelector("#drawer").classList.remove("open");document.querySelector("#shade").classList.remove("open")}
 document.querySelector("#cartBtn").onclick=openCart;document.querySelector("#closeCart").onclick=closeCart;document.querySelector("#shade").onclick=closeCart;document.querySelector("#closeProduct").onclick=closeProduct;document.querySelector("#productShade").onclick=closeProduct;
-document.querySelector("#checkout").onclick=()=>alert("Secure hosted checkout is the next connection. No card information is collected by this site yet.");
+document.querySelector("#checkout").onclick=()=>alert("Secure hosted checkout will be connected after the product catalog passes final visual QC.");
+
+setStatus("Refreshing the DTF collection with clean black-garment mockups…","working");
 render();
-fetch('/api/store/catalog').then(r=>r.json()).then(d=>{if(!d.ok)return;const live=new Map(d.products.map(p=>[p.name,p]));products=products.map(p=>{const x=live.get(p.name);return x?{...p,price:x.price_cents/100,img:x.mockup||p.img,images:x.images||[],printifyId:x.id,variants:x.variants}:p});render()}).catch(()=>{});
+
+fetch("/api/store/catalog",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+ if(!d.ok)throw Error("catalog unavailable");
+ products=(d.products||[]).map(x=>({id:x.id,name:x.name,type:x.category,price:x.price_cents/100,img:x.mockup,images:x.images||[],printifyId:x.id,variants:(x.variants||[]).filter(v=>v.is_available)}));
+ filter="All";buildFilters();render();
+ if(d.refreshing)setStatus(products.length+" of "+d.total+" products have passed clean-artwork QC. The rest are hidden while they regenerate.","working");
+ else setStatus(products.length+" products live in the preview — black garments, quote/graphic artwork, no garment logos.","ready");
+}).catch(()=>{setStatus("The clean catalog is still rebuilding. Broken or missing-image products are intentionally hidden.","working");render()});
