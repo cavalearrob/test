@@ -1,4 +1,4 @@
-const {buildProducts,repairProducts}=require('./build-products');
+const {buildProducts,repairProducts,BUILD_VERSION}=require('./build-products');
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const root=__dirname,port=process.env.PORT||8080;
 function json(res,code,obj){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(obj))}
@@ -8,7 +8,7 @@ async function printify(apiPath,method='GET',body){let r;for(let i=0;i<3;i++){r=
 const types={'.html':'text/html','.css':'text/css','.js':'application/javascript','.jpeg':'image/jpeg','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml'};
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),p=u.pathname;
- if(p==='/api/health')return json(res,200,{ok:true,printifyTokenConfigured:!!process.env.PRINTIFY_API_TOKEN});
+ if(p==='/api/health')return json(res,200,{ok:true,printifyTokenConfigured:!!process.env.PRINTIFY_API_TOKEN,buildVersion:BUILD_VERSION||'unknown'});
  if(p==='/api/printify/shops'){const r=await printify('/shops.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
