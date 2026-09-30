@@ -105,7 +105,8 @@ async function buildProducts(printify,opts={}){
 }
 async function repairProducts(printify,opts={}){
  const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(2,Number(opts.count)||1)),end=Math.min(slogans.length,start+count),results=[];
- const blackName=t=>{
+ const blackName=(t,category)=>{
+   if(category==='Panties')return true;
    const color=String(t||'').split('/')[0].trim().toLowerCase();
    return color==='black'||color==='solid black'||color==='solid black blend'||color==='black stitching';
  };
@@ -115,7 +116,7 @@ async function repairProducts(printify,opts={}){
    try{
      const pr=await printify('/shops/'+SHOP+'/products/'+id+'.json');
      if(pr.status>=400){results.push({index:i+1,title,ok:false,stage:'fetch',status:pr.status,error:pr.data});continue}
-     const variants=pr.data.variants||[],allIds=variants.map(v=>v.id),black=variants.filter(v=>blackName(v.title));
+     const variants=pr.data.variants||[],allIds=variants.map(v=>v.id),black=variants.filter(v=>blackName(v.title,category));
      if(!allIds.length||!black.length){results.push({index:i+1,title,ok:false,error:'No black variants available'});continue}
      const png=await renderPng(text,i,category==='Panties');
      const up=await printify('/uploads/images.json','POST',{file_name:'dtf-clean-v4-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
@@ -125,7 +126,7 @@ async function repairProducts(printify,opts={}){
        :[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
      const body={
        description:'[DTF-CLEAN-V4] '+text+' — black garment with original quote/graphic artwork. No brand logo on the garment.',
-       variants:variants.map(v=>({id:v.id,price:v.price||c.price,is_enabled:blackName(v.title)})),
+       variants:variants.map(v=>({id:v.id,price:v.price||c.price,is_enabled:blackName(v.title,category)})),
        print_areas:[{variant_ids:allIds,placeholders}]
      };
      const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',body);
