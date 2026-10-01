@@ -59,7 +59,7 @@ function heart(cx,cy,s,fill,stroke='none',sw=0){
 }
 function artworkSvg(text,index,isAop=false){
  const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505',cx=2250;
- const pantyShort=['EXPENSIVE','NO FREE PREVIEWS','SOCIAL CLUB','MEMBERS ONLY','CLEAN FIT'];
+ const pantyShort=['PREMIUM','NO PREVIEWS','DTF CLUB','MEMBERS ONLY','DIRTY THOUGHTS'];
  if(isAop){
    const short=pantyShort[Math.max(0,index-35)]||'BAD IDEA';
    return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart(cx,1900,620,pink)+fitText(short,cx,3100,520,3000,white,{spacing:5})+'<path d="M1450 3420 L3050 3420" stroke="'+pink+'" stroke-width="55" stroke-linecap="round"/></svg>';
@@ -198,4 +198,4 @@ async function repairProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.2-men'};
+module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.3-panty-safe'};
