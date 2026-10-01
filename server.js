@@ -17,7 +17,7 @@ http.createServer(async(req,res)=>{try{
   const r=await printify('/shops/6647970/products.json?limit=50');
   if(r.status>=400)return json(res,r.status,{ok:false,error:r.data});
   const source=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF '));
-  const clean=source.filter(x=>String(x.description||'').includes('[DTF-ORIGINAL-V5]'));
+  const clean=source.filter(x=>String(x.description||'').includes('[DTF-ORIGINAL-V5]') && (x.print_areas||[]).some(a=>(a.placeholders||[]).some(ph=>(ph.images||[]).some(im=>im.id))));
   const rows=clean.map(x=>{
     const enabled=(x.variants||[]).filter(v=>v.is_enabled);
     const price=enabled.length?Math.min(...enabled.map(v=>v.price)):null;
@@ -28,9 +28,11 @@ http.createServer(async(req,res)=>{try{
     if(!hero||!hero.src||!enabled.length)return null;
     const gallery=(x.images||[]).filter(im=>black&&(im.variant_ids||[]).includes(black.id)).slice(0,6).map(im=>({src:im.src,position:im.position||null,is_default:!!im.is_default,variant_ids:im.variant_ids||[]}));
     if(!gallery.length)gallery.push({src:hero.src,position:hero.position||null,is_default:!!hero.is_default,variant_ids:hero.variant_ids||[]});
-    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero.src,images:gallery,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
+    const productionArtworkIds=[...new Set((x.print_areas||[]).flatMap(a=>(a.placeholders||[]).flatMap(ph=>(ph.images||[]).map(im=>im.id).filter(Boolean))))];
+    if(!productionArtworkIds.length)return null;
+    return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero.src,images:gallery,production_artwork_ids:productionArtworkIds,production_synced:true,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
   }).filter(Boolean);
-  return json(res,200,{ok:true,total:source.length,approved_count:clean.length,count:rows.length,refreshing:rows.length<source.length,products:rows});
+  return json(res,200,{ok:true,total:source.length,approved_count:clean.length,count:rows.length,refreshing:rows.length<source.length,qc_policy:'manufacturer-mockup-only',products:rows});
  }
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
