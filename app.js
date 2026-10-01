@@ -1,4 +1,5 @@
 let products=[],filter="All",cart=[];
+try{cart=JSON.parse(localStorage.getItem("dtfCart")||"[]");if(!Array.isArray(cart))cart=[]}catch{cart=[]}
 const grid=document.querySelector("#products"),filters=document.querySelector("#filters");
 const status=document.createElement("div");status.id="catalogStatus";status.className="catalogStatus";grid.before(status);
 
@@ -29,13 +30,15 @@ function openProduct(p){
  modal.classList.add("open");document.querySelector("#productShade").classList.add("open");document.body.classList.add("locked");
 }
 function closeProduct(){document.querySelector("#productModal").classList.remove("open");document.querySelector("#productShade").classList.remove("open");document.body.classList.remove("locked")}
-function addToCart(p,v){cart.push({product:p,variant:v});document.querySelector("#count").textContent=cart.length;drawCart();openCart()}
-function drawCart(){document.querySelector("#cartItems").innerHTML=cart.map((x,i)=>'<div class="cartItem"><span>'+x.product.name+'<br><small>'+x.variant.title+'</small></span><span>'+money(x.variant.price_cents/100)+'　<a href="#" data-r="'+i+'">×</a></span></div>').join("");document.querySelector("#subtotal").textContent=money(cart.reduce((a,x)=>a+x.variant.price_cents/100,0));document.querySelectorAll("[data-r]").forEach(a=>a.onclick=e=>{e.preventDefault();cart.splice(+a.dataset.r,1);document.querySelector("#count").textContent=cart.length;drawCart()})}
+function saveCart(){localStorage.setItem("dtfCart",JSON.stringify(cart))}
+function addToCart(p,v){cart.push({product:p,variant:v});saveCart();document.querySelector("#count").textContent=cart.length;drawCart();openCart()}
+function drawCart(){document.querySelector("#cartItems").innerHTML=cart.map((x,i)=>'<div class="cartItem"><span>'+x.product.name+'<br><small>'+x.variant.title+'</small></span><span>'+money(x.variant.price_cents/100)+'　<a href="#" data-r="'+i+'">×</a></span></div>').join("");document.querySelector("#subtotal").textContent=money(cart.reduce((a,x)=>a+x.variant.price_cents/100,0));document.querySelectorAll("[data-r]").forEach(a=>a.onclick=e=>{e.preventDefault();cart.splice(+a.dataset.r,1);saveCart();document.querySelector("#count").textContent=cart.length;drawCart()})}
 function openCart(){document.querySelector("#drawer").classList.add("open");document.querySelector("#shade").classList.add("open")}
 function closeCart(){document.querySelector("#drawer").classList.remove("open");document.querySelector("#shade").classList.remove("open")}
 document.querySelector("#cartBtn").onclick=openCart;document.querySelector("#closeCart").onclick=closeCart;document.querySelector("#shade").onclick=closeCart;document.querySelector("#closeProduct").onclick=closeProduct;document.querySelector("#productShade").onclick=closeProduct;
-document.querySelector("#checkout").onclick=()=>alert("Secure hosted checkout will be connected after the product catalog passes final visual QC.");
+document.querySelector("#checkout").onclick=()=>{if(!cart.length)return;saveCart();location.href="/checkout.html"};
 
+document.querySelector("#count").textContent=cart.length;drawCart();
 setStatus("Loading the DTF collection…","working");
 render();
 
