@@ -151,3 +151,17 @@ jobs:
             echo "$RESP"
             echo "$RESP" | jq -e '.ok == true' >/dev/null
           done
+
+
+      - name: Build clean V2 replacement panties
+        if: contains(github.event.head_commit.message, '[rebuild-panties-v2]')
+        shell: bash
+        run: |
+          set -e
+          BASE="https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net"
+          sleep 25
+          HEALTH=$(curl --fail --show-error --retry 4 --retry-delay 5 "$BASE/api/health")
+          echo "$HEALTH" | jq -e '.buildVersion == "original-look-v5.5-panty-rebuild"' >/dev/null
+          RESP=$(curl --fail --show-error --retry 1 --retry-delay 5 --retry-all-errors --max-time 300 "$BASE/api/printify/rebuild-panties?run=1")
+          echo "$RESP" | jq '{ok,created,failed,results:[.results[]|{title,ok,id,mockup,stage}]}'
+          echo "$RESP" | jq -e '.ok == true and .created == 5' >/dev/null
