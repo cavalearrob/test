@@ -7,8 +7,8 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function readRaw(req,limit=1024*1024){return new Promise((resolve,reject)=>{let chunks=[],size=0;req.on('data',x=>{size+=x.length;if(size>limit){reject(new Error('request too large'));req.destroy();return}chunks.push(x)});req.on('end',()=>resolve(Buffer.concat(chunks)));req.on('error',reject)})}
 function stripeClient(){const key=process.env.STRIPE_SECRET_KEY;if(!key)throw new Error('STRIPE_SECRET_KEY missing');return new Stripe(key)}
 const SHOP_ID='6647970';
-const DEFAULT_SITE='https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net';
-function siteUrl(){return String(process.env.PUBLIC_SITE_URL||DEFAULT_SITE).replace(/\/$/,'')}
+const DEFAULT_SITE='https://dirtythoughtsfashion.com';
+function siteUrl(){const configured=String(process.env.PUBLIC_SITE_URL||DEFAULT_SITE).replace(/\/$/,'');return /azurewebsites\.net$/i.test(configured)?DEFAULT_SITE:configured}
 function cleanAddress(a={}){
  const out={first_name:String(a.first_name||'').trim(),last_name:String(a.last_name||'').trim(),email:String(a.email||'').trim(),phone:String(a.phone||'').trim(),country:String(a.country||'US').trim().toUpperCase(),region:String(a.region||'').trim(),address1:String(a.address1||'').trim(),address2:String(a.address2||'').trim(),city:String(a.city||'').trim(),zip:String(a.zip||'').trim()};
  for(const k of ['first_name','last_name','email','country','region','address1','city','zip'])if(!out[k])throw new Error('Missing shipping field: '+k);
