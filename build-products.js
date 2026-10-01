@@ -59,10 +59,15 @@ function heart(cx,cy,s,fill,stroke='none',sw=0){
 }
 function artworkSvg(text,index,isAop=false){
  const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505',cx=2250;
- const pantyShort=['PREMIUM','NO PREVIEWS','DTF CLUB','MEMBERS ONLY','DIRTY THOUGHTS'];
+ const pantyShort=['PREMIUM','NO FREE PREVIEWS','DTF SOCIAL CLUB','MEMBERS ONLY','DIRTY THOUGHTS'];
  if(isAop){
-   const short=pantyShort[Math.max(0,index-35)]||'BAD IDEA';
-   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart(cx,1900,620,pink)+fitText(short,cx,3100,520,3000,white,{spacing:5})+'<path d="M1450 3420 L3050 3420" stroke="'+pink+'" stroke-width="55" stroke-linecap="round"/></svg>';
+   // Panties are an all-over-print product. Keep the actual garment black and
+   // confine the DTF mark to a compact center-safe motif so the copy does not
+   // run into leg openings, seams, or the gusset on manufacturer mockups.
+   const short=pantyShort[Math.max(0,index-35)]||'DTF';
+   const mark=heart(cx,2260,330,pink)+fitText(short,cx,3040,360,2050,white,{spacing:3})+
+     '<path d="M1650 3300 L2850 3300" stroke="'+pink+'" stroke-width="38" stroke-linecap="round"/>';
+   return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+mark+'</svg>';
  }
  let art='';
  // Restore the original visual language from IMG_2954–IMG_2959:
@@ -177,7 +182,16 @@ async function repairProducts(printify,opts={}){
      const imageFor=(position,scale)=>({position,images:[{id:up.data.id,x:.5,y:.5,scale,angle:0}]});
      let printAreas;
      if(category==='Panties'){
-       printAreas=[{variant_ids:allIds,placeholders:['front','back','gusset'].map(position=>imageFor(position,1))}];
+       // Front carries the compact branded motif. Back and gusset use a plain
+       // black production tile so the slogan is never duplicated/cropped there.
+       const plain=await sharp({create:{width:4500,height:5400,channels:4,background:'#050505'}}).png().toBuffer();
+       const plainUp=await printify('/uploads/images.json','POST',{file_name:'dtf-panty-black-base.png',contents:plain.toString('base64')});
+       if(plainUp.status>=400){results.push({index:i+1,title,ok:false,stage:'upload-base',status:plainUp.status,error:plainUp.data});continue}
+       printAreas=[{variant_ids:allIds,placeholders:[
+         imageFor('front',1),
+         {position:'back',images:[{id:plainUp.data.id,x:.5,y:.5,scale:1,angle:0}]},
+         {position:'gusset',images:[{id:plainUp.data.id,x:.5,y:.5,scale:1,angle:0}]}
+       ]}];
      }else{
        // Preserve Printify's existing variant grouping. Some Choice products use
        // multiple print-area groups; collapsing them causes API validation 8251.
@@ -198,4 +212,4 @@ async function repairProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.3-panty-safe'};
+module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.4-panty-front-safe'};
