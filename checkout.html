@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Checkout — Dirty Thoughts Fashion</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080808;color:#fff;font-family:Arial,Helvetica,sans-serif}a{color:#ff1682}.bar{padding:18px 5vw;border-bottom:1px solid #292929;display:flex;justify-content:space-between;align-items:center}.logo{font-size:32px;font-weight:900;font-style:italic;color:#ff1682}.wrap{max-width:1040px;margin:auto;padding:36px 20px 70px;display:grid;grid-template-columns:1fr .8fr;gap:36px}.panel{background:#111;border:1px solid #292929;border-radius:18px;padding:24px}h1{margin-top:0}label{display:block;font-size:11px;font-weight:900;margin:14px 0 6px;color:#bbb}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}input,select{width:100%;padding:13px 14px;border:1px solid #3a3a3a;border-radius:10px;background:#090909;color:#fff;font-size:15px}.order{border-bottom:1px solid #292929;padding:12px 0;display:flex;justify-content:space-between;gap:15px}.order small{color:#aaa}.total{display:flex;justify-content:space-between;font-size:18px;margin-top:18px}.pay{width:100%;margin-top:20px;border:0;border-radius:999px;padding:15px;background:#ff1682;color:#fff;font-weight:900;font-size:15px;cursor:pointer}.pay:disabled{opacity:.45;cursor:not-allowed}.note{font-size:11px;color:#999;line-height:1.5;margin-top:12px}.error{display:none;background:#35111f;border:1px solid #8d2850;padding:12px;border-radius:10px;margin:14px 0}.mode{font-size:11px;color:#aaa;margin-bottom:15px}.empty{text-align:center;padding:50px 10px}@media(max-width:760px){.wrap{grid-template-columns:1fr;padding-top:20px}.row{grid-template-columns:1fr}}
+</style></head>
+<body><div class="bar"><div class="logo">DTF</div><a href="/">← RETURN TO SHOP</a></div>
+<main class="wrap"><section class="panel"><h1>SHIPPING DETAILS</h1><p class="mode" id="mode">Checking secure payment connection…</p><div class="error" id="error"></div>
+<form id="form">
+<div class="row"><div><label>FIRST NAME</label><input name="first_name" required autocomplete="given-name"></div><div><label>LAST NAME</label><input name="last_name" required autocomplete="family-name"></div></div>
+<label>EMAIL</label><input name="email" type="email" required autocomplete="email">
+<label>PHONE <small>(optional)</small></label><input name="phone" autocomplete="tel">
+<label>STREET ADDRESS</label><input name="address1" required autocomplete="address-line1">
+<label>APT / SUITE <small>(optional)</small></label><input name="address2" autocomplete="address-line2">
+<div class="row"><div><label>CITY</label><input name="city" required autocomplete="address-level2"></div><div><label>STATE</label><input name="region" required maxlength="2" placeholder="IL" autocomplete="address-level1"></div></div>
+<div class="row"><div><label>ZIP CODE</label><input name="zip" required autocomplete="postal-code"></div><div><label>COUNTRY</label><select name="country"><option value="US">United States</option></select></div></div>
+<button class="pay" id="pay" type="submit" disabled>CONTINUE TO SECURE PAYMENT →</button>
+<p class="note">Your card details are entered on Stripe's hosted checkout page, not on Dirty Thoughts Fashion. We send the paid order to Printify for fulfillment only after Stripe confirms payment.</p>
+</form></section>
+<aside class="panel"><h1>YOUR ORDER</h1><div id="items"></div><div class="total"><span>Merchandise</span><strong id="subtotal">$0.00</strong></div><p class="note">Standard shipping is calculated directly from Printify for your address before the Stripe payment page opens.</p></aside></main>
+<script>
+const money=c=>'$'+(c/100).toFixed(2),err=document.querySelector('#error'),pay=document.querySelector('#pay'),itemsEl=document.querySelector('#items');
+let cart=[];try{cart=JSON.parse(localStorage.getItem('dtfCart')||'[]')}catch{}
+if(!Array.isArray(cart))cart=[];
+const grouped=new Map();
+for(const x of cart){const pid=x.product?.printifyId||x.product?.id,vid=x.variant?.id;if(!pid||!vid)continue;const k=pid+':'+vid,g=grouped.get(k);grouped.set(k,{product_id:pid,variant_id:Number(vid),quantity:(g?.quantity||0)+1,name:x.product.name,variant:x.variant.title,price:Number(x.variant.price_cents)||0})}
+const order=[...grouped.values()];
+itemsEl.innerHTML=order.length?order.map(x=>'<div class="order"><span>'+x.name+'<br><small>'+x.variant+' × '+x.quantity+'</small></span><strong>'+money(x.price*x.quantity)+'</strong></div>').join(''):'<div class="empty">Your bag is empty.<br><br><a href="/">Shop the collection</a></div>';
+document.querySelector('#subtotal').textContent=money(order.reduce((n,x)=>n+x.price*x.quantity,0));
+fetch('/api/checkout/config',{cache:'no-store'}).then(r=>r.json()).then(c=>{if(!c.stripeConfigured)throw Error('Stripe is not connected yet.');document.querySelector('#mode').textContent=c.mode==='live'?'Secure payments are connected.':'Stripe TEST MODE is connected — no real charge will be made.';pay.disabled=!order.length}).catch(e=>{document.querySelector('#mode').textContent=e.message});
+document.querySelector('#form').onsubmit=async e=>{e.preventDefault();err.style.display='none';pay.disabled=true;pay.textContent='CALCULATING SHIPPING…';const address=Object.fromEntries(new FormData(e.target).entries());address.region=String(address.region||'').toUpperCase();try{const r=await fetch('/api/checkout/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:order.map(({product_id,variant_id,quantity})=>({product_id,variant_id,quantity})),address})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Checkout could not be started.');pay.textContent='OPENING SECURE PAYMENT…';location.href=d.url}catch(ex){err.textContent=ex.message;err.style.display='block';pay.disabled=false;pay.textContent='CONTINUE TO SECURE PAYMENT →'}};
+</script></body></html>
