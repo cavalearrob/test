@@ -69,10 +69,10 @@ jobs:
           set +e
           BASE="https://dirty-thoughts-fashion-g7dhfpawe6esfef7.centralus-01.azurewebsites.net"
           sleep 25
-          echo "Verifying original-look-v5.1 backend"
+          echo "Verifying original-look-v5.2-men backend"
           HEALTH=$(curl --fail --show-error --retry 3 --retry-delay 5 "$BASE/api/health")
           echo "$HEALTH"
-          echo "$HEALTH" | jq -e '.buildVersion == "original-look-v5.1"' >/dev/null || exit 1
+          echo "$HEALTH" | jq -e '.buildVersion == "original-look-v5.2-men"' >/dev/null || exit 1
           FAIL=0
           for START in $(seq 0 18); do
             echo "Repairing DTF product $((START+1))/19"
