@@ -121,9 +121,16 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/shops'){const r=await printify('/shops.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
- if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
+ if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398,9,88,5358,6397];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
  if(p==='/api/store/catalog'){
   try{const payload=await cachedStoreCatalog();res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public, max-age=60, stale-while-revalidate=300'});return res.end(JSON.stringify(payload))}catch(e){return json(res,503,{ok:false,error:'Catalog is temporarily unavailable.'})}
+ }
+ if(p==='/api/printify/womens-fit-candidates'){
+  const all=await printify('/catalog/blueprints.json');
+  if(all.status>=400)return json(res,all.status,{ok:false,error:all.data});
+  const list=Array.isArray(all.data)?all.data:(all.data?.data||[]);
+  const wanted=list.filter(x=>/women|ladies|female|baby tee|v-neck|v neck/i.test([x.title,x.brand,x.model].filter(Boolean).join(' ')) && /tee|shirt|t-shirt|v-neck|v neck/i.test(x.title||''));
+  return json(res,200,{ok:true,count:wanted.length,products:wanted.map(x=>({id:x.id,title:x.title,brand:x.brand,model:x.model,images:x.images}))});
  }
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
