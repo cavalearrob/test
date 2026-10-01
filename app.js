@@ -46,6 +46,7 @@ fetch("/api/store/catalog",{cache:"no-store"}).then(r=>r.json()).then(d=>{
  if(!d.ok)throw Error("catalog unavailable");
  products=(d.products||[]).map(x=>({id:x.id,name:x.name,type:x.category,price:x.price_cents/100,img:x.mockup,images:x.images||[],printifyId:x.id,variants:(x.variants||[]).filter(v=>v.is_available)}));
  filter="All";buildFilters();render();
- if(d.refreshing)setStatus("New pieces are being added to the collection — check back for more.","working");
+ if(products.length===40)status.remove();
+ else if(d.refreshing)setStatus("The collection is being updated. Please check back shortly.","working");
  else status.remove();
 }).catch(()=>{setStatus("The collection is being updated. Please check back shortly.","working");render()});

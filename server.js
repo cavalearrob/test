@@ -122,7 +122,7 @@ http.createServer(async(req,res)=>{try{
     if(!productionArtworkIds.length)return null;
     return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero.src,images:gallery,production_artwork_ids:productionArtworkIds,production_synced:true,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))};
   }).filter(Boolean);
-  return json(res,200,{ok:true,total:source.length,approved_count:clean.length,count:rows.length,refreshing:rows.length<source.length,qc_policy:'manufacturer-mockup-only',products:rows});
+  return json(res,200,{ok:true,total:source.length,approved_count:clean.length,count:rows.length,refreshing:rows.length<40,qc_policy:'manufacturer-mockup-only',products:rows});
  }
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
