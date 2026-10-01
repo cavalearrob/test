@@ -13,6 +13,9 @@ const slogans=[
 "PREMIUM ACCESS","GOOD TIPS, BAD IDEAS","EXCLUSIVE CONTENT","MAIN CHARACTER AFTER DARK","YOUR CRUSH SUBSCRIBES","DRESS CODE: EXPENSIVE",
 "NO FREE PREVIEWS","DTF SOCIAL CLUB","MEMBERS ONLY ENERGY","DIRTY THOUGHTS — CLEAN FIT"
 ];
+const mensSlogans=[
+"JUST HERE FOR THE COLLAB","SUPPORTING CAST","SCENE PARTNER","GUEST APPEARANCE","OFF CAMERA","AFTER HOURS DEPARTMENT","PROFESSIONAL PLUS ONE","CONTENT SUPPORT STAFF","HER FAVORITE COSTAR","THE OTHER TALENT","DO NOT DISTURB — PRODUCTION","PRIVATE AUDITIONS","WARDROBE OPTIONAL","GOOD HUSBAND. QUESTIONABLE HOBBIES.","I HOLD THE CAMERA","QUALITY CONTROL","BEHIND THE SCENES","COLLABORATIVE PARTNER","CAST & CREW","NO COMMENT. CHECK THE CREDITS.","NOT THE JEALOUS TYPE","OPEN MINDED DEPARTMENT","HAPPILY COMPLICATED","COMMUNICATION IS FOREPLAY","ASK US ABOUT THE GROUP CHAT"
+];
 const productIds=["6abc14f6260c88028202a9c1","6abc1500bab7c171c90e2f4c","6abc150f6d4f888f2c043596","6abc151935a61a185c01f3c0","6abc1522c9018c5a7800bcc5","6abc152fa242b654f90d749c","6abc153dc9018c5a7800bccf","6abc154d7816221ec40a02f6","6abc15589b2bbab9840ca4a6","6abc15627816221ec40a030d","6abc189a6c23b4e9610bd171","6abc18a679dbacca490d138c","6abc18b0260c88028202ac30","6abc18c0d83811f59d05ba43","6abc18d61bfd33e859031d3d","6abc18e2bab7c171c90e313d","6abc18ee18395eee87051d79","6abc18f890ce5154a70423a5","6abc19096c23b4e9610bd19c","6abc191ad83811f59d05ba61","6abc19261bfd33e859031d57","6abc1939ecee919a4d0f93d2","6abc195becee919a4d0f93f2","6abc1969ecee919a4d0f9400","6abc19761bfd33e859031d8c","6abc1984c9018c5a7800bec9","6abc1992a242b654f90d775b","6abc19a0c9018c5a7800bef2","6abc19b26e660f7c7d072388","6abc19c6a242b654f90d7781","6abc19d6bd543ded3e01bd7f","6abc19e5f7710e1fdc03d4d0","6abc19fcbd543ded3e01bd9d","6abc1a133ada9325be0e42f5","6abc1a206e660f7c7d0723c2","6abc1a36a242b654f90d77d0","6abc1a44bab7c171c90e3235","6abc1a54a242b654f90d7801","6abc1a69f7710e1fdc03d59a","6abc1a8779dbacca490d1537"];
 const plan=[...Array(12).fill('T-Shirts'),...Array(7).fill('Tank Tops'),...Array(5).fill('Crop Tops'),...Array(6).fill('Hoodies'),...Array(5).fill('Sweatpants'),...Array(5).fill('Panties')];
 const cfg={
@@ -130,6 +133,29 @@ async function buildProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
 }
+async function buildMensProducts(printify,opts={}){
+ const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(10,Number(opts.count)||5)),end=Math.min(mensSlogans.length,start+count),results=[];
+ const c=cfg['T-Shirts'];
+ const vr=await printify('/catalog/blueprints/'+c.blueprint+'/print_providers/'+c.provider+'/variants.json?show-out-of-stock=0');
+ const list=Array.isArray(vr.data)?vr.data:(vr.data?.variants||[]),variants=pickVariants(list,c);
+ if(!variants.length)return {ok:false,error:'No black mens T-shirt variants available'};
+ const existing=await printify('/shops/'+SHOP+'/products.json?limit=100');
+ const existingTitles=new Map(((existing.data&&existing.data.data)||[]).map(p=>[p.title,p]));
+ for(let i=start;i<end;i++){
+  const text=mensSlogans[i],title=text+' — DTF Men T-Shirt';
+  if(existingTitles.has(title)){results.push({index:i+1,title,ok:true,skipped:true,id:existingTitles.get(title).id});continue}
+  try{
+   const png=await renderPng(text,100+i,false);
+   const up=await printify('/uploads/images.json','POST',{file_name:'dtf-men-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
+   if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',error:up.data});continue}
+   const body={title,description:'[DTF-MEN-V1] '+text+' — DTF Men After Hours. Hidden adult humor for creators, costars, performers and partners.',blueprint_id:c.blueprint,print_provider_id:c.provider,variants:variants.map(v=>({id:v.id,price:2999,is_enabled:true})),print_areas:[{variant_ids:variants.map(v=>v.id),placeholders:[{position:'front',images:[{id:up.data.id,x:.5,y:.5,scale:.60,angle:0}]}]}]};
+   const cr=await printify('/shops/'+SHOP+'/products.json','POST',body);
+   if(cr.status>=400){results.push({index:i+1,title,ok:false,stage:'create',error:cr.data});continue}
+   results.push({index:i+1,title,ok:true,id:cr.data.id,production_artwork_id:up.data.id,mockup:cr.data.images?.find(x=>x.is_default)?.src||cr.data.images?.[0]?.src||null});
+  }catch(e){results.push({index:i+1,title,ok:false,error:e.message})}
+ }
+ return {ok:results.every(x=>x.ok),collection:'DTF Men — After Hours',start:start+1,end,created:results.filter(x=>x.ok&&!x.skipped).length,skipped:results.filter(x=>x.skipped).length,failed:results.filter(x=>!x.ok).length,results};
+}
 async function repairProducts(printify,opts={}){
  const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(2,Number(opts.count)||1)),end=Math.min(slogans.length,start+count),results=[];
  const blackName=(t,category)=>{
@@ -172,4 +198,4 @@ async function repairProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,repairProducts,BUILD_VERSION:'original-look-v5.1'};
+module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.2-men'};

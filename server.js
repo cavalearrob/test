@@ -1,4 +1,4 @@
-const {buildProducts,repairProducts,BUILD_VERSION}=require('./build-products');
+const {buildProducts,buildMensProducts,repairProducts,BUILD_VERSION}=require('./build-products');
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const root=__dirname,port=process.env.PORT||8080;
 function json(res,code,obj){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(obj))}
@@ -37,6 +37,10 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
   const out=await repairProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
+ }
+ if(p==='/api/printify/build-mens-drafts'){
+  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Builds DTF Men — After Hours as Printify drafts from the exact production artwork used for manufacturer mockups.'});
+  const out=await buildMensProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
  }
  if(p==='/api/printify/build-drafts'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to render artwork and create the 40 DTF products as Printify drafts. Existing matching titles are skipped.'});
