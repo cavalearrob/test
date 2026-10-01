@@ -12,7 +12,7 @@ function buildFilters(){
 function render(){
  grid.innerHTML="";
  const rows=products.filter(p=>(filter==="All"||p.type===filter)&&p.img&&p.variants.length);
- if(!rows.length){grid.innerHTML='<div class="catalogEmpty">Original DTF product mockups are being regenerated. Only restored designs will appear here.</div>';return}
+ if(!rows.length){grid.innerHTML='<div class="catalogEmpty">New pieces are coming soon. Check back shortly.</div>';return}
  rows.forEach(p=>{
    const a=document.createElement("article");a.className="product";
    a.innerHTML='<div class="pic" style="background-image:url(\''+p.img+'\')"><span class="type">'+p.type+'</span></div><div class="productInfo"><h3>'+p.name+'</h3><p>'+p.type+' • original DTF quote/graphic design</p><div class="priceRow"><strong>'+money(p.price)+'</strong><button>CHOOSE OPTIONS</button></div></div>';
@@ -36,13 +36,13 @@ function closeCart(){document.querySelector("#drawer").classList.remove("open");
 document.querySelector("#cartBtn").onclick=openCart;document.querySelector("#closeCart").onclick=closeCart;document.querySelector("#shade").onclick=closeCart;document.querySelector("#closeProduct").onclick=closeProduct;document.querySelector("#productShade").onclick=closeProduct;
 document.querySelector("#checkout").onclick=()=>alert("Secure hosted checkout will be connected after the product catalog passes final visual QC.");
 
-setStatus("Restoring the original DTF clothing designs…","working");
+setStatus("Loading the DTF collection…","working");
 render();
 
 fetch("/api/store/catalog",{cache:"no-store"}).then(r=>r.json()).then(d=>{
  if(!d.ok)throw Error("catalog unavailable");
  products=(d.products||[]).map(x=>({id:x.id,name:x.name,type:x.category,price:x.price_cents/100,img:x.mockup,images:x.images||[],printifyId:x.id,variants:(x.variants||[]).filter(v=>v.is_available)}));
  filter="All";buildFilters();render();
- if(d.refreshing)setStatus(products.length+" of "+d.total+" products have passed original-artwork QC. The rest are hidden while they regenerate.","working");
- else setStatus(products.length+" restored DTF products are live in the preview.","ready");
-}).catch(()=>{setStatus("The restored catalog is still rebuilding. Broken or outdated products are intentionally hidden.","working");render()});
+ if(d.refreshing)setStatus("New pieces are being added to the collection — check back for more.","working");
+ else status.remove();
+}).catch(()=>{setStatus("The collection is being updated. Please check back shortly.","working");render()});
