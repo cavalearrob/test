@@ -212,4 +212,42 @@ async function repairProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,buildMensProducts,repairProducts,BUILD_VERSION:'original-look-v5.4-panty-front-safe'};
+
+async function buildReplacementPanties(printify){
+ const c=cfg['Panties'],results=[];
+ const vr=await printify('/catalog/blueprints/'+c.blueprint+'/print_providers/'+c.provider+'/variants.json?show-out-of-stock=0');
+ const list=Array.isArray(vr.data)?vr.data:(vr.data?.variants||[]),variants=pickVariants(list,c);
+ if(!variants.length)return {ok:false,error:'No panty variants available'};
+ const replacements=[
+  {name:'PREMIUM ACCESS',short:'PREMIUM'},
+  {name:'NO FREE PREVIEWS',short:'NO PREVIEWS'},
+  {name:'DTF SOCIAL CLUB',short:'DTF CLUB'},
+  {name:'MEMBERS ONLY ENERGY',short:'MEMBERS ONLY'},
+  {name:'DIRTY THOUGHTS — CLEAN FIT',short:'DIRTY THOUGHTS'}
+ ];
+ for(let j=0;j<replacements.length;j++){
+  const r=replacements[j],idx=35+j,title=r.name+' — DTF Pantie V2';
+  try{
+   const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505',cx=2250;
+   const art='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><rect width="100%" height="100%" fill="'+black+'"/>'+heart(cx,2250,220,pink)+fitText(r.short,cx,2800,300,1500,white,{spacing:2})+fitText('DTF',cx,3300,240,800,pink,{spacing:3})+'</svg>';
+   const png=await sharp(Buffer.from(art)).png({compressionLevel:9,palette:true}).toBuffer();
+   const up=await printify('/uploads/images.json','POST',{file_name:'dtf-panty-v2-'+(j+1)+'-'+slug(r.name)+'.png',contents:png.toString('base64')});
+   if(up.status>=400){results.push({title,ok:false,stage:'upload',error:up.data});continue}
+   const plain=await sharp({create:{width:4500,height:5400,channels:4,background:black}}).png().toBuffer();
+   const base=await printify('/uploads/images.json','POST',{file_name:'dtf-panty-v2-black.png',contents:plain.toString('base64')});
+   if(base.status>=400){results.push({title,ok:false,stage:'base',error:base.data});continue}
+   const ids=variants.map(v=>v.id);
+   const body={title,description:'[DTF-ORIGINAL-V5] [DTF-PANTY-V2] '+r.name+' — compact front-safe DTF underwear artwork.',blueprint_id:c.blueprint,print_provider_id:c.provider,variants:variants.map(v=>({id:v.id,price:c.price,is_enabled:true})),print_areas:[{variant_ids:ids,placeholders:[
+    {position:'front',images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]},
+    {position:'back',images:[{id:base.data.id,x:.5,y:.5,scale:1,angle:0}]},
+    {position:'gusset',images:[{id:base.data.id,x:.5,y:.5,scale:1,angle:0}]}
+   ]}]};
+   const cr=await printify('/shops/'+SHOP+'/products.json','POST',body);
+   if(cr.status>=400){results.push({title,ok:false,stage:'create',error:cr.data});continue}
+   results.push({title,ok:true,id:cr.data.id,mockup:cr.data.images?.find(x=>x.is_default)?.src||cr.data.images?.[0]?.src||null});
+  }catch(e){results.push({title,ok:false,error:e.message})}
+ }
+ return {ok:results.every(x=>x.ok),created:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
+}
+
+module.exports={buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,BUILD_VERSION:'original-look-v5.5-panty-rebuild'};
