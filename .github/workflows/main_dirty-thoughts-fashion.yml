@@ -47,6 +47,22 @@ jobs:
       - name: Restart Azure Web App
         run: az webapp restart --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod
 
+      - name: Storefront smoke check
+        shell: bash
+        run: |
+          set -e
+          SITE="https://dirtythoughtsfashion.com"
+          echo "Waiting for custom-domain deployment..."
+          sleep 20
+          echo "Checking HTTPS + application health"
+          HEALTH=$(curl --fail --show-error --location --retry 5 --retry-delay 5 --retry-all-errors --max-time 30 "$SITE/api/health")
+          echo "$HEALTH" | jq '{ok, buildVersion, stripeConfigured, stripeWebhookConfigured, autoFulfill}'
+          echo "$HEALTH" | jq -e '.ok == true' >/dev/null
+          echo "Checking live 40-product catalog"
+          CATALOG=$(curl --fail --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --max-time 90 "$SITE/api/store/catalog")
+          echo "$CATALOG" | jq '{ok, total, approved_count, count, refreshing, categories: (.products | group_by(.category) | map({category: .[0].category, count: length}))}'
+          echo "$CATALOG" | jq -e '.ok == true' >/dev/null
+
       - name: Build remaining DTF Printify drafts
         if: contains(github.event.head_commit.message, '[build-dtf]')
         shell: bash
