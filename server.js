@@ -1,4 +1,4 @@
-const {buildProducts,buildMensProducts,repairProducts,BUILD_VERSION}=require('./build-products');
+const {buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,BUILD_VERSION}=require('./build-products');
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const Stripe=require('stripe');
 const root=__dirname,port=process.env.PORT||8080;
@@ -124,6 +124,10 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/repair-artwork'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
   const out=await repairProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
+ }
+ if(p==='/api/printify/rebuild-panties'){
+  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Builds five clean V2 replacement underwear products without deleting the originals.'});
+  const out=await buildReplacementPanties(printify);catalogCache={payload:null,expires:0,refreshing:null};return json(res,200,out);
  }
  if(p==='/api/printify/build-mens-drafts'){
   if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Builds DTF Men — After Hours as Printify drafts from the exact production artwork used for manufacturer mockups.'});
