@@ -134,8 +134,7 @@ async function repairProducts(printify,opts={}){
  const start=Math.max(0,Number(opts.start)||0),count=Math.max(1,Math.min(2,Number(opts.count)||1)),end=Math.min(slogans.length,start+count),results=[];
  const blackName=(t,category)=>{
    if(category==='Panties')return true;
-   const color=String(t||'').split('/')[0].trim().toLowerCase();
-   return color==='black'||color==='solid black'||color==='solid black blend'||color==='black stitching';
+   return /(^|\/|\s)(solid\s+)?black(\s+blend|\s+stitching)?(\s|\/|$)/i.test(String(t||''));
  };
  for(let i=start;i<end;i++){
    const text=slogans[i],category=plan[i],c=cfg[category],id=productIds[i],title=text+' — DTF '+category.replace(/s$/,'');
@@ -149,13 +148,22 @@ async function repairProducts(printify,opts={}){
      const png=await renderPng(text,i,category==='Panties');
      const up=await printify('/uploads/images.json','POST',{file_name:'dtf-original-v5-'+String(i+1).padStart(2,'0')+'-'+slug(text)+'.png',contents:png.toString('base64')});
      if(up.status>=400){results.push({index:i+1,title,ok:false,stage:'upload',status:up.status,error:up.data});continue}
-     const placeholders=category==='Panties'
-       ?['front','back','gusset'].map(position=>({position,images:[{id:up.data.id,x:.5,y:.5,scale:1,angle:0}]}))
-       :[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}];
+     const imageFor=(position,scale)=>({position,images:[{id:up.data.id,x:.5,y:.5,scale,angle:0}]});
+     let printAreas;
+     if(category==='Panties'){
+       printAreas=[{variant_ids:allIds,placeholders:['front','back','gusset'].map(position=>imageFor(position,1))}];
+     }else{
+       // Preserve Printify's existing variant grouping. Some Choice products use
+       // multiple print-area groups; collapsing them causes API validation 8251.
+       const existingAreas=(pr.data.print_areas||[]).filter(a=>Array.isArray(a.variant_ids)&&a.variant_ids.length);
+       printAreas=existingAreas.length
+         ? existingAreas.map(a=>({variant_ids:a.variant_ids,placeholders:[imageFor(c.position,c.scale)]}))
+         : [{variant_ids:allIds,placeholders:[imageFor(c.position,c.scale)]}];
+     }
      const body={
-             description:'[DTF-ORIGINAL-V5] '+text+' — restored Dirty Thoughts Fashion original-look quote/graphic artwork.',
+       description:'[DTF-ORIGINAL-V5] '+text+' — restored Dirty Thoughts Fashion original-look quote/graphic artwork.',
        variants:variants.map(v=>({id:v.id,price:v.price||c.price,is_enabled:i>=35 ? true : blackName(v.title,category)})),
-       print_areas:[{variant_ids:allIds,placeholders}]
+       print_areas:printAreas
      };
      const ur=await printify('/shops/'+SHOP+'/products/'+id+'.json','PUT',body);
      if(ur.status>=400){results.push({index:i+1,title,ok:false,stage:'update',status:ur.status,error:ur.data});continue}
@@ -164,4 +172,4 @@ async function repairProducts(printify,opts={}){
  }
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
-module.exports={buildProducts,repairProducts,BUILD_VERSION:'original-look-v5'};
+module.exports={buildProducts,repairProducts,BUILD_VERSION:'original-look-v5.1'};
