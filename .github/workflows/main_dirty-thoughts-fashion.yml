@@ -65,6 +65,9 @@ jobs:
           grep -q 'api/store/catalog' /tmp/dtf-app.js
           curl --fail --silent --show-error --location --retry 3 --retry-delay 3 --max-time 30 "$SITE/IMG_2953.jpeg?v=smoke" -o /tmp/dtf-hero.jpeg
           test "$(wc -c < /tmp/dtf-hero.jpeg)" -gt 10000
+          echo "Checking DTF women campaign image"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 3 --max-time 30 "$SITE/assets/dtf-model-grid.jpg?v=smoke" -o /tmp/dtf-model-grid.jpg
+          test "$(wc -c < /tmp/dtf-model-grid.jpg)" -gt 10000
           echo "Checking live 40-product catalog"
           CATALOG=$(curl --fail --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --max-time 90 "$SITE/api/store/catalog")
           echo "$CATALOG" | jq '{ok, total, approved_count, count, refreshing, categories: (.products | group_by(.category) | map({category: .[0].category, count: length}))}'
