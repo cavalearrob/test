@@ -1,4 +1,4 @@
-const {buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,BUILD_VERSION}=require('./build-products');
+const {buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,rebuildSweatpants,BUILD_VERSION}=require('./build-products');
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const Stripe=require('stripe');
 const root=__dirname,port=process.env.PORT||8080;
@@ -122,6 +122,10 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
+ if(p==='/api/printify/rebuild-sweatpants'){
+  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Rebuilds the five DTF sweatpants with 2.5x larger leg artwork.'});
+  const out=await rebuildSweatpants(printify);return json(res,out.ok?200:500,out);
+ }
  if(p==='/api/store/catalog'){
   try{const payload=await cachedStoreCatalog();res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public, max-age=60, stale-while-revalidate=300'});return res.end(JSON.stringify(payload))}catch(e){return json(res,503,{ok:false,error:'Catalog is temporarily unavailable.'})}
  }
