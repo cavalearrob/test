@@ -23,7 +23,7 @@ const cfg={
  'Tank Tops':{blueprint:18,provider:99,price:2999,position:'front',colors:['Solid Black'],scale:.68},
  'Crop Tops':{blueprint:411,provider:99,price:3299,position:'front',colors:['Solid Black Blend'],scale:.66},
  'Hoodies':{blueprint:77,provider:99,price:5999,position:'front',colors:['Black'],scale:.62},
- 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:.48},
+ 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:.88},
  'Panties':{blueprint:407,provider:14,price:3499,position:'front',colors:['Black stitching'],scale:1}
 };
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,55)}
@@ -56,6 +56,18 @@ function fitText(text,cx,baseline,wanted,maxWidth,fill,opts={}){
 function heart(cx,cy,s,fill,stroke='none',sw=0){
  const x=cx,y=cy;
  return '<path d="M '+x+' '+(y+s*.30)+' C '+(x-s*.58)+' '+(y-s*.12)+', '+(x-s*.55)+' '+(y-s*.72)+', '+x+' '+(y-s*.43)+' C '+(x+s*.55)+' '+(y-s*.72)+', '+(x+s*.58)+' '+(y-s*.12)+', '+x+' '+(y+s*.30)+' Z" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function sweatpantsSvg(text,index){
+ const W=4500,H=5400,pink='#ff1682',white='#ffffff',cx=2250;
+ const ls=lines(text,13),gap=620,first=2050-((ls.length-1)*gap)/2;
+ let art=heart(cx,900,250,'none',pink,48)+heart(cx+520,1180,170,pink);
+ art+=ls.map((l,j)=>{
+   const emphasis=/LOVE|DIRTY|TIPS|PREMIUM|EXCLUSIVE|CRUSH|EXPENSIVE|ACCESS/i.test(l);
+   const y=first+j*gap+(j%2?55:0);
+   return fitText(l,cx,y,emphasis?760:650,3150,emphasis?pink:white,{spacing:emphasis?-4:1});
+ }).join('');
+ art+=heart(cx-520,first+ls.length*gap+180,190,pink)+heart(cx+400,first+ls.length*gap+430,300,'none',pink,52);
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+art+'</svg>';
 }
 function artworkSvg(text,index,isAop=false){
  const W=4500,H=5400,pink='#ff1682',white='#ffffff',black='#050505',cx=2250;
@@ -96,7 +108,10 @@ function artworkSvg(text,index,isAop=false){
  }
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+art+'</svg>';
 }
-async function renderPng(text,index,isAop){return sharp(Buffer.from(artworkSvg(text,index,isAop))).png({compressionLevel:9,palette:true}).toBuffer()}
+async function renderPng(text,index,isAop){
+ const svg=plan[index]==='Sweatpants'?sweatpantsSvg(text,index):artworkSvg(text,index,isAop);
+ return sharp(Buffer.from(svg)).png({compressionLevel:9,palette:true}).toBuffer()
+}
 function pickVariants(list,c){
  let v=list.filter(x=>x.is_available!==false&&c.colors.includes(x.options?.color));
  if(!v.length)v=list.filter(x=>x.is_available!==false&&/black|dark|navy/i.test(x.options?.color||''));
