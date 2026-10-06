@@ -23,7 +23,7 @@ const cfg={
  'Tank Tops':{blueprint:18,provider:99,price:2999,position:'front',colors:['Solid Black'],scale:.68},
  'Crop Tops':{blueprint:411,provider:99,price:3299,position:'front',colors:['Solid Black Blend'],scale:.66},
  'Hoodies':{blueprint:77,provider:99,price:5999,position:'front',colors:['Black'],scale:.62},
- 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:.88},
+ 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:2.20},
  'Panties':{blueprint:407,provider:14,price:3499,position:'front',colors:['Black stitching'],scale:1}
 };
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,55)}
@@ -228,6 +228,28 @@ async function repairProducts(printify,opts={}){
  return {ok:results.every(x=>x.ok),start:start+1,end,repaired:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
 
+async function rebuildSweatpants(printify){
+ const c=cfg['Sweatpants'],results=[],start=30,end=35;
+ const vr=await printify('/catalog/blueprints/'+c.blueprint+'/print_providers/'+c.provider+'/variants.json?show-out-of-stock=0');
+ const list=Array.isArray(vr.data)?vr.data:(vr.data?.variants||[]),variants=pickVariants(list,c);
+ if(!variants.length)return {ok:false,error:'No black sweatpants variants available'};
+ for(let i=start;i<end;i++){
+  const text=slogans[i],oldId=productIds[i],title=text+' — DTF Sweatpant';
+  try{
+   if(oldId){const del=await printify('/shops/'+SHOP+'/products/'+oldId+'.json','DELETE');if(del.status>=400&&del.status!==404){results.push({title,ok:false,stage:'delete',status:del.status,error:del.data});continue}}
+   const png=await renderPng(text,i,false);
+   const up=await printify('/uploads/images.json','POST',{file_name:'dtf-sweatpants-xl-'+String(i+1)+'-'+slug(text)+'.png',contents:png.toString('base64')});
+   if(up.status>=400){results.push({title,ok:false,stage:'upload',error:up.data});continue}
+   const ids=variants.map(v=>v.id);
+   const body={title,description:'[DTF-ORIGINAL-V6] '+text+' — DTF sweatpants with enlarged 2.5x leg artwork.',blueprint_id:c.blueprint,print_provider_id:c.provider,variants:variants.map(v=>({id:v.id,price:c.price,is_enabled:true})),print_areas:[{variant_ids:ids,placeholders:[{position:c.position,images:[{id:up.data.id,x:.5,y:.5,scale:c.scale,angle:0}]}]}]};
+   const cr=await printify('/shops/'+SHOP+'/products.json','POST',body);
+   if(cr.status>=400){results.push({title,ok:false,stage:'create',error:cr.data});continue}
+   results.push({title,ok:true,deleted:oldId,new_id:cr.data.id,mockup:cr.data.images?.find(x=>x.is_default)?.src||cr.data.images?.[0]?.src||null});
+  }catch(e){results.push({title,ok:false,error:e.message})}
+ }
+ return {ok:results.every(x=>x.ok),created:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
+}
+
 async function buildReplacementPanties(printify){
  const c=cfg['Panties'],results=[];
  const vr=await printify('/catalog/blueprints/'+c.blueprint+'/print_providers/'+c.provider+'/variants.json?show-out-of-stock=0');
@@ -265,4 +287,4 @@ async function buildReplacementPanties(printify){
  return {ok:results.every(x=>x.ok),created:results.filter(x=>x.ok).length,failed:results.filter(x=>!x.ok).length,results};
 }
 
-module.exports={buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,BUILD_VERSION:'original-look-v5.5-panty-rebuild'};
+module.exports={buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,rebuildSweatpants,BUILD_VERSION:'original-look-v6-sweatpants-xl'};
