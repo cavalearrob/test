@@ -27,7 +27,7 @@ async function validateCart(items){
  const valid=[];
  for(const x of grouped.values()){
   const pr=await printify('/shops/'+SHOP_ID+'/products/'+x.product_id+'.json');
-  if(pr.status>=400||!String(pr.data?.description||'').includes('[DTF-ORIGINAL-V5]'))throw new Error('A product in your bag is no longer available.');
+  if(pr.status>=400||!/\[DTF-ORIGINAL-V(?:5|6)\]/.test(String(pr.data?.description||'')))throw new Error('A product in your bag is no longer available.');
   const v=(pr.data.variants||[]).find(z=>Number(z.id)===x.variant_id&&z.is_enabled&&z.is_available!==false);
   if(!v)throw new Error('A selected size is no longer available.');
   valid.push({...x,name:String(pr.data.title||'DTF item').split(' — DTF ')[0],variant_title:v.title,price_cents:Number(v.price)});
@@ -62,7 +62,7 @@ async function buildStoreCatalog(){
  const r=await printify('/shops/6647970/products.json?limit=50');
  if(r.status>=400)throw new Error('Printify catalog unavailable');
  const source=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF '));
- const clean=source.filter(x=>String(x.description||'').includes('[DTF-ORIGINAL-V5]') && (x.print_areas||[]).some(a=>(a.placeholders||[]).some(ph=>(ph.images||[]).some(im=>im.id))));
+ const clean=source.filter(x=>/\[DTF-ORIGINAL-V(?:5|6)\]/.test(String(x.description||'')) && (x.print_areas||[]).some(a=>(a.placeholders||[]).some(ph=>(ph.images||[]).some(im=>im.id))));
  // The five V2 panties supersede the original five underwear drafts. Keep the
  // originals in Printify for rollback/QC, but never expose both sets in-store.
  const hasPantyV2=clean.some(x=>String(x.description||'').includes('[DTF-PANTY-V2]'));
