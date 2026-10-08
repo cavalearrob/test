@@ -23,7 +23,7 @@ const cfg={
  'Tank Tops':{blueprint:18,provider:99,price:2999,position:'front',colors:['Solid Black'],scale:.68},
  'Crop Tops':{blueprint:411,provider:99,price:3299,position:'front',colors:['Solid Black Blend'],scale:.66},
  'Hoodies':{blueprint:77,provider:99,price:5999,position:'front',colors:['Black'],scale:.62},
- 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:2.20},
+ 'Sweatpants':{blueprint:1398,provider:39,price:5999,position:'left_leg_front',colors:['Black'],scale:1.45},
  'Panties':{blueprint:407,provider:14,price:3499,position:'front',colors:['Black stitching'],scale:1}
 };
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,55)}
@@ -59,14 +59,14 @@ function heart(cx,cy,s,fill,stroke='none',sw=0){
 }
 function sweatpantsSvg(text,index){
  const W=4500,H=5400,pink='#ff1682',white='#ffffff',cx=2250;
- const ls=lines(text,13),gap=620,first=2050-((ls.length-1)*gap)/2;
- let art=heart(cx,900,250,'none',pink,48)+heart(cx+520,1180,170,pink);
+ const ls=lines(text,11),gap=580,first=2100-((ls.length-1)*gap)/2;
+ let art=heart(cx,1100,210,'none',pink,40)+heart(cx+400,1250,130,pink);
  art+=ls.map((l,j)=>{
    const emphasis=/LOVE|DIRTY|TIPS|PREMIUM|EXCLUSIVE|CRUSH|EXPENSIVE|ACCESS/i.test(l);
    const y=first+j*gap+(j%2?55:0);
-   return fitText(l,cx,y,emphasis?760:650,3150,emphasis?pink:white,{spacing:emphasis?-4:1});
+   return fitText(l,cx,y,emphasis?690:590,2450,emphasis?pink:white,{spacing:emphasis?-4:1});
  }).join('');
- art+=heart(cx-520,first+ls.length*gap+180,190,pink)+heart(cx+400,first+ls.length*gap+430,300,'none',pink,52);
+ art+=heart(cx-350,first+ls.length*gap+90,145,pink)+heart(cx+300,first+ls.length*gap+230,190,'none',pink,40);
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+art+'</svg>';
 }
 function artworkSvg(text,index,isAop=false){
