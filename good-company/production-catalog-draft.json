@@ -1,0 +1,66 @@
+{
+  "brand": "Good Company",
+  "status": "UNPUBLISHED ARTWORK / SUPPLIER PROOF REQUIRED",
+  "styles": [
+    "mens_regular_tee",
+    "mens_oversized_tee",
+    "mens_hoodie",
+    "womens_fitted_tee",
+    "womens_oversized_tee",
+    "womens_cropped_hoodie",
+    "womens_oversized_hoodie"
+  ],
+  "designs": [
+    {
+      "id": 1,
+      "symbol": "Infinity Heart",
+      "back": "FREEDOM TO CHOOSE"
+    },
+    {
+      "id": 2,
+      "symbol": "Swap Keys",
+      "back": "KEY PARTY ALUMNI"
+    },
+    {
+      "id": 3,
+      "symbol": "Tricircle",
+      "back": "JEALOUSY? NEVER HEARD OF HER"
+    },
+    {
+      "id": 4,
+      "symbol": "Unicorn",
+      "bundle": {
+        "FMF": [
+          "man: WE FOUND HER",
+          "woman-unicorn: THEY FOUND ME",
+          "woman: WE FOUND HER"
+        ],
+        "MFM": [
+          "woman: WE FOUND HIM",
+          "man-unicorn: THEY FOUND ME",
+          "man: WE FOUND HIM"
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "symbol": "Upside-down pineapple",
+      "back": "WE'RE THE FUN COUPLE",
+      "note": "crown must point downward"
+    },
+    {
+      "id": 6,
+      "symbol": "Triquetra",
+      "back": "SWAP MEET REGULAR"
+    }
+  ],
+  "rules": {
+    "front": "small emblem on wearer's left chest",
+    "back": "large detailed graphic with approved phrase",
+    "men": "chrome and cool blues",
+    "women": "chrome and pinks",
+    "neck": "Good Company logo + dynamic supplier size/legal specs",
+    "color_options": "Supplier verified per blank; not all colors guaranteed"
+  },
+  "do_not_publish": true
+}
