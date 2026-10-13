@@ -37,6 +37,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_59D78DF320054278AF2A5BDCC68B58BF }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A7540AF8B4D544D286BCB8D5C4112A16 }}
 
+      - name: Remove legacy Printify listings for Good Company
+        if: contains(github.event.head_commit.message, '[clear-printify-dtf]')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOKEN=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='PRINTIFY_API_TOKEN'].value | [0]" -o tsv)
+          test -n "$TOKEN"
+          test "$TOKEN" != "None"
+          echo "::add-mask::$TOKEN"
+          PRINTIFY_API_TOKEN="$TOKEN" node scripts/migrate-good-company-printify.js
+
       - name: Keep Azure App Service always on
         run: az webapp config set --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --always-on true
 
