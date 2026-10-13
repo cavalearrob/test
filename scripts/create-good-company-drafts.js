@@ -6,6 +6,7 @@ const fs=require('fs'),path=require('path'),sharp=require('sharp');
 const TOKEN=process.env.PRINTIFY_API_TOKEN,SHOP='6647970';
 if(!TOKEN)throw Error('PRINTIFY_API_TOKEN missing');
 const ROOT=path.join(__dirname,'..','Good_Company_Uncropped_Printify_Assets');
+// Product title deduplication protects reruns after partial creation.
 const DRY_RUN=process.env.GC_DRY_RUN!=='0';
 const LIMIT=Math.max(1,Math.min(20,Number(process.env.GC_LIMIT||4)));
 const DESIGNS=[
