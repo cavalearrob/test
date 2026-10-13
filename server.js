@@ -85,7 +85,7 @@ async function cachedStoreCatalog(){
  if(!catalogCache.refreshing)catalogCache.refreshing=buildStoreCatalog().then(p=>{catalogCache={payload:p,expires:Date.now()+300000,refreshing:null};return p}).catch(e=>{catalogCache.refreshing=null;throw e});
  return catalogCache.refreshing;
 }
-function checkoutConfigured(){return process.env.GC_CHECKOUT_ENABLED==='1'&&!!process.env.STRIPE_SECRET_KEY&&!!process.env.STRIPE_WEBHOOK_SECRET&&!!process.env.PRINTIFY_API_TOKEN}
+function checkoutConfigured(){return process.env.GC_CHECKOUT_ENABLED==='1'&&process.env.GC_AUTO_FULFILL==='1'&&process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')&&!!process.env.STRIPE_WEBHOOK_SECRET&&!!process.env.PRINTIFY_API_TOKEN}
 const types={'.html':'text/html','.css':'text/css','.js':'application/javascript','.jpeg':'image/jpeg','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml'};
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),p=u.pathname;
