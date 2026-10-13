@@ -70,6 +70,16 @@ jobs:
           echo "::add-mask::$TOKEN"
           PRINTIFY_API_TOKEN="$TOKEN" node scripts/good-company-hoodie-audit.js
 
+      - name: Stage Good Company product proofs in Printify
+        if: contains(github.event.head_commit.message, '[stage-good-company]')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOKEN=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='PRINTIFY_API_TOKEN'].value | [0]" -o tsv)
+          test -n "$TOKEN" && test "$TOKEN" != "None"
+          echo "::add-mask::$TOKEN"
+          PRINTIFY_API_TOKEN="$TOKEN" GC_DRY_RUN=0 GC_LIMIT=4 node scripts/create-good-company-drafts.js
+
       - name: Keep Azure App Service always on
         run: az webapp config set --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --always-on true
 
