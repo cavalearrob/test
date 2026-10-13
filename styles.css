@@ -85,3 +85,7 @@ footer{background:#f1dfc9;color:#554a40;border-color:#d4bea5}footer b{color:#141
 .gcLiveShop .gcLaunchNote{color:#6e6169;margin-top:27px}
 @media(max-width:900px){.gcItems{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.gcItems{gap:10px}.gcItemInfo{padding:10px}.gcDetail{grid-template-columns:1fr}.gcDetail img{max-height:240px}.gcLiveShop{padding:30px 14px}}
+
+
+/* Good Company product gallery */
+.gcGallery{min-width:0}.gcMainPhoto{width:100%;aspect-ratio:1;object-fit:contain;border-radius:10px}.gcViewLabel{font-size:13px;font-weight:700;margin:8px 0}.gcGalleryThumbs{display:flex;gap:8px;overflow-x:auto;padding:5px 0 10px;scroll-snap-type:x proximity}.gcShopDialog .gcViewThumb{flex:0 0 90px;display:flex;flex-direction:column;gap:5px;align-items:center;padding:5px;border-radius:9px;background:#f6f0eb;color:#28202c;border:2px solid transparent;font-size:11px;scroll-snap-align:start}.gcShopDialog .gcViewThumb.active{border-color:#a8743f}.gcViewThumb img{width:76px;height:76px;object-fit:contain}.gcGalleryControls{display:flex;gap:10px;justify-content:space-between}.gcGalleryControls button{flex:1}.gcItem>img{cursor:pointer}.gcItem>img:focus-visible{outline:3px solid #a8743f;outline-offset:-3px}@media(max-width:550px){.gcShopDialog{padding:14px}.gcDetail .gcMainPhoto{max-height:310px}.gcShopDialog .gcViewThumb{flex-basis:75px}.gcViewThumb img{width:60px;height:60px}}
