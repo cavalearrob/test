@@ -90,6 +90,16 @@ jobs:
           echo "::add-mask::$TOKEN"
           PRINTIFY_API_TOKEN="$TOKEN" node scripts/audit-good-company-drafts.js
 
+      - name: Reprice Good Company Printify products
+        if: contains(github.event.head_commit.message, '[reprice-good-company]')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TOKEN=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='PRINTIFY_API_TOKEN'].value | [0]" -o tsv)
+          test -n "$TOKEN" && test "$TOKEN" != "None"
+          echo "::add-mask::$TOKEN"
+          PRINTIFY_API_TOKEN="$TOKEN" GC_PRICE_APPLY=1 node scripts/reprice-good-company.js
+
       - name: Keep Azure App Service always on
         run: az webapp config set --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --always-on true
 
