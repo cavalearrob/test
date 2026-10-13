@@ -1,4 +1,4 @@
-const {buildProducts,buildMensProducts,repairProducts,buildReplacementPanties,rebuildSweatpants,BUILD_VERSION}=require('./build-products');
+const BUILD_VERSION='good-company-prelaunch-v1';
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const Stripe=require('stripe');
 const root=__dirname,port=process.env.PORT||8080;
@@ -59,16 +59,7 @@ function printifyOnce(apiPath,method='GET',body){return new Promise((resolve,rej
 async function printify(apiPath,method='GET',body){let r;for(let i=0;i<3;i++){r=await printifyOnce(apiPath,method,body);if(![500,502,503,504].includes(r.status))return r;if(i<2)await sleep(800*(i+1))}return r}
 let catalogCache={payload:null,expires:0,refreshing:null};
 async function buildStoreCatalog(){
- const r=await printify('/shops/6647970/products.json?limit=50');
- if(r.status>=400)throw new Error('Printify catalog unavailable');
- const source=((r.data&&r.data.data)||[]).filter(x=>x.title&&x.title.includes(' — DTF '));
- const clean=source.filter(x=>/\[DTF-ORIGINAL-V(?:5|6)\]/.test(String(x.description||'')) && (x.print_areas||[]).some(a=>(a.placeholders||[]).some(ph=>(ph.images||[]).some(im=>im.id))));
- // The five V2 panties supersede the original five underwear drafts. Keep the
- // originals in Printify for rollback/QC, but never expose both sets in-store.
- const hasPantyV2=clean.some(x=>String(x.description||'').includes('[DTF-PANTY-V2]'));
- const storefront=hasPantyV2?clean.filter(x=>!(/ — DTF Pantie$/.test(String(x.title||''))&&!String(x.description||'').includes('[DTF-PANTY-V2]'))):clean;
- const rows=storefront.map(x=>{const enabled=(x.variants||[]).filter(v=>v.is_enabled),price=enabled.length?Math.min(...enabled.map(v=>v.price)):null,suffix=x.title.split(' — DTF ').pop(),category=suffix==='T-Shirt'?'T-Shirts':suffix==='Tank Top'?'Tank Tops':suffix==='Crop Top'?'Crop Tops':suffix==='Hoodie'?'Hoodies':suffix==='Sweatpant'?'Sweatpants':suffix==='Pantie'?'Panties':suffix==='Pantie V2'?'Panties':suffix;const black=enabled.find(v=>/^\s*(solid black blend|solid black|black stitching|black)\s*\//i.test(v.title||''))||enabled[0],hero=(x.images||[]).find(im=>black&&(im.variant_ids||[]).includes(black.id)&&im.position!=='back')||(x.images||[]).find(im=>black&&(im.variant_ids||[]).includes(black.id))||(x.images||[]).find(im=>im.is_default)||(x.images||[])[0];if(!hero||!hero.src||!enabled.length)return null;const gallery=(x.images||[]).filter(im=>black&&(im.variant_ids||[]).includes(black.id)).slice(0,6).map(im=>({src:im.src,position:im.position||null,is_default:!!im.is_default,variant_ids:im.variant_ids||[]}));if(!gallery.length)gallery.push({src:hero.src,position:hero.position||null,is_default:!!hero.is_default,variant_ids:hero.variant_ids||[]});const productionArtworkIds=[...new Set((x.print_areas||[]).flatMap(a=>(a.placeholders||[]).flatMap(ph=>(ph.images||[]).map(im=>im.id).filter(Boolean))))];if(!productionArtworkIds.length)return null;return {id:x.id,name:x.title.split(' — DTF ')[0],category,price_cents:price,mockup:hero.src,images:gallery,production_artwork_ids:productionArtworkIds,production_synced:true,variants:enabled.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:v.is_available!==false}))}}).filter(Boolean);
- return {ok:true,total:source.length,approved_count:storefront.length,count:rows.length,refreshing:rows.length<40,qc_policy:'manufacturer-mockup-only',products:rows};
+ return {ok:true,total:0,approved_count:0,count:0,refreshing:false,qc_policy:'Good Company prelaunch—catalog unpublished',products:[]};
 }
 async function cachedStoreCatalog(){
  const now=Date.now();if(catalogCache.payload&&now<catalogCache.expires)return catalogCache.payload;
@@ -80,7 +71,8 @@ const types={'.html':'text/html','.css':'text/css','.js':'application/javascript
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),p=u.pathname;
  if(p==='/api/health')return json(res,200,{ok:true,printifyTokenConfigured:!!process.env.PRINTIFY_API_TOKEN,stripeConfigured:!!process.env.STRIPE_SECRET_KEY,stripeWebhookConfigured:!!process.env.STRIPE_WEBHOOK_SECRET,autoFulfill:process.env.DTF_AUTO_FULFILL==='1',buildVersion:BUILD_VERSION||'unknown'});
- if(p==='/api/checkout/config')return json(res,200,{ok:true,stripeConfigured:!!process.env.STRIPE_SECRET_KEY,webhookConfigured:!!process.env.STRIPE_WEBHOOK_SECRET,mode:String(process.env.STRIPE_SECRET_KEY||'').startsWith('sk_live_')?'live':'test',autoFulfill:process.env.DTF_AUTO_FULFILL==='1'});
+ if(p==='/api/checkout/config')return json(res,200,{ok:true,checkoutEnabled:false,mode:'prelaunch'});
+ if((p==='/api/checkout/session'&&req.method==='POST')||(p==='/api/checkout/session-status'&&req.method==='GET')) return json(res,503,{ok:false,error:'Good Company is preparing its new collection. Checkout is not available yet.'});
  if(p==='/api/checkout/session'&&req.method==='POST'){
   if(!process.env.STRIPE_SECRET_KEY)return json(res,503,{ok:false,error:'Payments are not connected yet.'});
   const raw=await readRaw(req);let body;try{body=JSON.parse(raw.toString('utf8')||'{}')}catch{return json(res,400,{ok:false,error:'Invalid checkout request.'})}
@@ -122,30 +114,9 @@ http.createServer(async(req,res)=>{try{
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
  if(p.startsWith('/api/printify/blueprint/')){const id=p.split('/').pop();if(!/^\\d+$/.test(id))return json(res,400,{error:'invalid blueprint id'});const r=await printify('/catalog/blueprints/'+id+'.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/dtf-candidates'){const ids=[6,18,77,407,411,1398];const results=[];for(const id of ids){const r=await printify('/catalog/blueprints/'+id+'.json');results.push({id,status:r.status,title:r.data&&r.data.title,brand:r.data&&r.data.brand,model:r.data&&r.data.model,error:r.status>=400?r.data:undefined})}return json(res,200,{ok:results.some(x=>x.status===200),results})}
- if(p==='/api/printify/rebuild-sweatpants'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Rebuilds the five DTF sweatpants with 2.5x larger leg artwork.'});
-  const out=await rebuildSweatpants(printify);return json(res,out.ok?200:500,out);
- }
- if(p==='/api/store/catalog'){
-  try{const payload=await cachedStoreCatalog();res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public, max-age=60, stale-while-revalidate=300'});return res.end(JSON.stringify(payload))}catch(e){return json(res,503,{ok:false,error:'Catalog is temporarily unavailable.'})}
- }
- if(p==='/api/printify/repair-artwork'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Repairs existing DTF drafts with vector-path typography so logos and slogans render reliably.'});
-  const out=await repairProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
- }
- if(p==='/api/printify/rebuild-panties'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Builds five clean V2 replacement underwear products without deleting the originals.'});
-  const out=await buildReplacementPanties(printify);catalogCache={payload:null,expires:0,refreshing:null};return json(res,200,out);
- }
- if(p==='/api/printify/build-mens-drafts'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Builds DTF Men — After Hours as Printify drafts from the exact production artwork used for manufacturer mockups.'});
-  const out=await buildMensProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
- }
- if(p==='/api/printify/build-drafts'){
-  if(u.searchParams.get('run')!=='1')return json(res,200,{ok:true,ready:true,message:'Add ?run=1 to render artwork and create the 40 DTF products as Printify drafts. Existing matching titles are skipped.'});
-  const out=await buildProducts(printify,{start:u.searchParams.get('start'),count:u.searchParams.get('count')});return json(res,200,out);
- }
-
+ // Retired DTF draft creation and repair endpoints are deliberately disabled.
+ if(/^\/api\/printify\/(rebuild-sweatpants|repair-artwork|rebuild-panties|build-mens-drafts|build-drafts)$/.test(p)) return json(res,410,{ok:false,error:'Legacy DTF mutations retired; Good Company drafts require reviewed production artwork.'});
+ if(p==='/api/store/catalog')return json(res,200,await cachedStoreCatalog());
  if(p==='/api/printify/dtf-analysis'){
   const candidates=[{id:6,category:'T-Shirts'},{id:18,category:'Tank Tops'},{id:411,category:'Crop Tops'},{id:77,category:'Hoodies'},{id:1398,category:'Sweatpants'},{id:407,category:'Panties'}];
   const global=await printify('/catalog/print_providers.json');
