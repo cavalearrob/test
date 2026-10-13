@@ -52,7 +52,7 @@ function selectVariants(vs,style){
  return [...colorMap.values()].flat().slice(0,55);
 }
 async function listProducts(){
- const data=await call('/shops/'+SHOP+'/products.json?limit=100');
+ const data=await call('/shops/'+SHOP+'/products.json?limit=50');
  return data.data||[];
 }
 (async()=>{
