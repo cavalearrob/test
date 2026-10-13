@@ -8,7 +8,7 @@ if(!TOKEN)throw Error('PRINTIFY_API_TOKEN missing');
 const ROOT=path.join(__dirname,'..','Good_Company_Uncropped_Printify_Assets');
 // Product title deduplication protects reruns after partial creation.
 const DRY_RUN=process.env.GC_DRY_RUN!=='0';
-const LIMIT=Math.max(1,Math.min(20,Number(process.env.GC_LIMIT||4)));
+const LIMIT=Math.max(1,Math.min(40,Number(process.env.GC_LIMIT||4)));
 const DESIGNS=[
  {file:'01_infinity_heart_freedom_to_choose.png',title:'Infinity Heart — Freedom to Choose'},
  {file:'02_swap_keys_key_party_alumni.png',title:'Swap Keys — Key Party Alumni'},
