@@ -47,3 +47,7 @@ header{background:#f7eada;border-bottom:1px solid #d6c4ad;box-shadow:0 2px 18px 
 footer{background:#f1dfc9;color:#554a40;border-color:#d4bea5}footer b{color:#141414}
 .drawer,.productModal{background:#fffaf3;color:#141414;border-color:#ddc8b1}.drawerHead,.drawerFoot,.cartItem{border-color:#decbb5}.drawerHead button,.modalClose{color:#141414}.productModal .modalInfo p{color:#665c54}.modalInfo select{background:#fff;color:#141414;border-color:#cbb69d}.modalInfo>small:first-child{color:#a8743f}.modalThumbs button.active{border-color:#a8743f}.modalAdd{background:#a8743f}
 @media(max-width:800px){.gcHero{grid-template-columns:1fr}.gcHeroCopy{padding:50px 24px}.gcHeroVisual{min-height:280px}.gcVisualCircle{max-width:230px}.gcHero h1{font-size:70px}}
+
+
+/* Good Company finishing pass */
+.gcBrandLogo{width:42px;height:42px;object-fit:contain;flex:none}.gcHeroLogo{width:95px;height:95px;object-fit:contain;margin:8px 0 0}.gcVisualCircle img{width:55%;height:55%;object-fit:contain;filter:drop-shadow(0 7px 8px #372a2933)}.gcVisualCircle small{margin-top:-6px}.gcComingSoon{min-height:330px;text-align:center;padding:76px 5vw}.gcComingSoon .shopHead{justify-content:center}.gcComingSoon .shopHead h2{font-size:clamp(29px,4vw,48px)}.gcComingSoon>p{color:#655a4f;max-width:650px;line-height:1.7;margin:10px auto 25px}.gcComingSymbols{display:flex;justify-content:center;gap:26px;color:#a8743f;font-size:32px}.gcComingSoon .shopHead small{letter-spacing:.18em}.gcHeroVisual{overflow:hidden}
