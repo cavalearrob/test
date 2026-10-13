@@ -110,6 +110,21 @@ jobs:
           echo "::add-mask::$TOKEN"
           PRINTIFY_API_TOKEN="$TOKEN" node scripts/publish-good-company.js
 
+      - name: Audit Good Company checkout prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check server.js
+          node --check good-company-shop.js
+          KEY=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='STRIPE_SECRET_KEY'].value | [0]" -o tsv)
+          HOOK=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='STRIPE_WEBHOOK_SECRET'].value | [0]" -o tsv)
+          PRINTIFY=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='PRINTIFY_API_TOKEN'].value | [0]" -o tsv)
+          AUTO=$(az webapp config appsettings list --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --query "[?name=='GC_AUTO_FULFILL'].value | [0]" -o tsv)
+          case "$KEY" in sk_live_*) echo "Stripe: live configured";; sk_test_*) echo "Stripe: test only";; *) echo "Stripe: missing or unknown";; esac
+          if [ -n "$HOOK" ] && [ "$HOOK" != "None" ]; then echo "Webhook secret: configured"; else echo "Webhook secret: missing"; fi
+          if [ -n "$PRINTIFY" ] && [ "$PRINTIFY" != "None" ]; then echo "Printify token: configured"; else echo "Printify token: missing"; fi
+          echo "Good Company auto-fulfill enabled: $([ "$AUTO" = "1" ] && echo yes || echo no)"
+
       - name: Keep Azure App Service always on
         run: az webapp config set --name dirty-thoughts-fashion --resource-group rg-coorvanta-prod --always-on true
 
