@@ -1,4 +1,4 @@
-const BUILD_VERSION='good-company-prelaunch-v1';
+const BUILD_VERSION='good-company-commerce-v1';
 const http=require('http'),fs=require('fs'),path=require('path'),https=require('https');
 const Stripe=require('stripe');
 const root=__dirname,port=process.env.PORT||8080;
@@ -27,10 +27,10 @@ async function validateCart(items){
  const valid=[];
  for(const x of grouped.values()){
   const pr=await printify('/shops/'+SHOP_ID+'/products/'+x.product_id+'.json');
-  if(pr.status>=400||!/\[DTF-ORIGINAL-V(?:5|6)\]/.test(String(pr.data?.description||'')))throw new Error('A product in your bag is no longer available.');
+  if(pr.status>=400||!String(pr.data?.title||'').startsWith('Good Company |')||!/\[GOOD-COMPANY-PROOF\]/.test(String(pr.data?.description||'')))throw new Error('A product in your bag is no longer available.');
   const v=(pr.data.variants||[]).find(z=>Number(z.id)===x.variant_id&&z.is_enabled&&z.is_available!==false);
   if(!v)throw new Error('A selected size is no longer available.');
-  valid.push({...x,name:String(pr.data.title||'DTF item').split(' — DTF ')[0],variant_title:v.title,price_cents:Number(v.price)});
+  valid.push({...x,name:String(pr.data.title||'Good Company item').replace(/^Good Company \| /,''),variant_title:v.title,price_cents:Number(v.price)});
  }
  return valid;
 }
@@ -49,17 +49,35 @@ async function fulfillPaidSession(session){
  const md=session.metadata||{},items=Object.keys(md).filter(k=>/^item_\d+$/.test(k)).sort((a,b)=>Number(a.slice(5))-Number(b.slice(5))).map(k=>{const [product_id,variant_id,quantity]=String(md[k]).split('|');return {product_id,variant_id:Number(variant_id),quantity:Number(quantity),external_id:session.id+'-'+k}});
  if(!items.length)throw new Error('Paid Stripe session has no fulfillment items.');
  const address_to={first_name:md.ship_first,last_name:md.ship_last,email:md.ship_email,phone:md.ship_phone||'',country:md.ship_country||'US',region:md.ship_region,address1:md.ship_address1,address2:md.ship_address2||'',city:md.ship_city,zip:md.ship_zip};
- const order=await printify('/shops/'+SHOP_ID+'/orders.json','POST',{external_id:session.id,label:'DTF '+session.id.slice(-10),line_items:items,shipping_method:1,send_shipping_notification:true,address_to});
+ const order=await printify('/shops/'+SHOP_ID+'/orders.json','POST',{external_id:session.id,label:'Good Company '+session.id.slice(-10),line_items:items,shipping_method:1,send_shipping_notification:true,address_to});
  if(order.status>=400)throw new Error('Printify order creation failed: '+JSON.stringify(order.data));
  let production=null;
- if(process.env.DTF_AUTO_FULFILL==='1')production=await printify('/shops/'+SHOP_ID+'/orders/'+order.data.id+'/send_to_production.json','POST',{});
- return {ok:true,printify_order_id:order.data.id,production_requested:process.env.DTF_AUTO_FULFILL==='1',production_status:production?.status||null};
+ if(process.env.GC_AUTO_FULFILL==='1')production=await printify('/shops/'+SHOP_ID+'/orders/'+order.data.id+'/send_to_production.json','POST',{});
+ return {ok:true,printify_order_id:order.data.id,production_requested:process.env.GC_AUTO_FULFILL==='1',production_status:production?.status||null};
 }
 function printifyOnce(apiPath,method='GET',body){return new Promise((resolve,reject)=>{const token=process.env.PRINTIFY_API_TOKEN;if(!token)return reject(new Error('PRINTIFY_API_TOKEN missing'));const r=https.request({hostname:'api.printify.com',path:'/v1'+apiPath,method,headers:{Authorization:'Bearer '+token,Accept:'application/json','Content-Type':'application/json;charset=utf-8','User-Agent':'DTF-Azure-Store'}},x=>{let d='';x.on('data',c=>d+=c);x.on('end',()=>{try{resolve({status:x.statusCode,data:JSON.parse(d||'{}')})}catch(e){resolve({status:x.statusCode,data:d})}})});r.setTimeout(90000,()=>r.destroy(new Error('Printify request timed out')));r.on('error',reject);if(body)r.write(JSON.stringify(body));r.end()})}
 async function printify(apiPath,method='GET',body){let r;for(let i=0;i<3;i++){r=await printifyOnce(apiPath,method,body);if(![500,502,503,504].includes(r.status))return r;if(i<2)await sleep(800*(i+1))}return r}
 let catalogCache={payload:null,expires:0,refreshing:null};
 async function buildStoreCatalog(){
- return {ok:true,total:0,approved_count:0,count:0,refreshing:false,qc_policy:'Good Company prelaunch—catalog unpublished',products:[]};
+ const all=[];let page=1;
+ while(page<=5){
+  const r=await printify('/shops/'+SHOP_ID+'/products.json?limit=50&page='+page);
+  if(r.status>=400)throw new Error('Printify catalog unavailable ('+r.status+')');
+  all.push(...(r.data?.data||[]));
+  if(page>=Number(r.data?.last_page||1))break;
+  page++;
+ }
+ const selected=all.filter(p=>String(p.title||'').startsWith('Good Company |'));
+ const products=selected.map(p=>{
+  const vs=(p.variants||[]).filter(v=>v.is_enabled&&v.is_available!==false&&Number.isSafeInteger(Number(v.price))&&Number(v.price)>0);
+  const images=(p.images||[]).filter(x=>/^https:\/\//.test(String(x.src||'')));
+  const front=images.find(i=>i.is_default&&/front/i.test(i.src||''))||images.find(i=>/front/i.test(i.src||''))||images[0];
+  const style=String(p.title||'').split(' | ').at(-1);
+  const variants=vs.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:true}));
+  return {id:p.id,name:p.title.replace(/^Good Company \| /,''),category:style,price_cents:Math.min(...variants.map(v=>v.price_cents)),mockup:front?.src||null,
+   images:images.slice(0,24).map(i=>({src:i.src})),variants};
+ }).filter(p=>p.variants.length&&p.mockup&&Number.isFinite(p.price_cents));
+ return {ok:true,total:products.length,approved_count:products.length,count:products.length,refreshing:false,products};
 }
 async function cachedStoreCatalog(){
  const now=Date.now();if(catalogCache.payload&&now<catalogCache.expires)return catalogCache.payload;
@@ -67,12 +85,13 @@ async function cachedStoreCatalog(){
  if(!catalogCache.refreshing)catalogCache.refreshing=buildStoreCatalog().then(p=>{catalogCache={payload:p,expires:Date.now()+300000,refreshing:null};return p}).catch(e=>{catalogCache.refreshing=null;throw e});
  return catalogCache.refreshing;
 }
+function checkoutConfigured(){return process.env.GC_CHECKOUT_ENABLED==='1'&&!!process.env.STRIPE_SECRET_KEY&&!!process.env.STRIPE_WEBHOOK_SECRET&&!!process.env.PRINTIFY_API_TOKEN}
 const types={'.html':'text/html','.css':'text/css','.js':'application/javascript','.jpeg':'image/jpeg','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml'};
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost'),p=u.pathname;
- if(p==='/api/health')return json(res,200,{ok:true,printifyTokenConfigured:!!process.env.PRINTIFY_API_TOKEN,stripeConfigured:!!process.env.STRIPE_SECRET_KEY,stripeWebhookConfigured:!!process.env.STRIPE_WEBHOOK_SECRET,autoFulfill:process.env.DTF_AUTO_FULFILL==='1',buildVersion:BUILD_VERSION||'unknown'});
- if(p==='/api/checkout/config')return json(res,200,{ok:true,checkoutEnabled:false,mode:'prelaunch'});
- if((p==='/api/checkout/session'&&req.method==='POST')||(p==='/api/checkout/session-status'&&req.method==='GET')) return json(res,503,{ok:false,error:'Good Company is preparing its new collection. Checkout is not available yet.'});
+ if(p==='/api/health')return json(res,200,{ok:true,checkoutEnabled:checkoutConfigured(),printifyTokenConfigured:!!process.env.PRINTIFY_API_TOKEN,stripeConfigured:!!process.env.STRIPE_SECRET_KEY,stripeWebhookConfigured:!!process.env.STRIPE_WEBHOOK_SECRET,autoFulfill:process.env.GC_AUTO_FULFILL==='1',buildVersion:BUILD_VERSION||'unknown'});
+ if(p==='/api/checkout/config')return json(res,200,{ok:true,checkoutEnabled:checkoutConfigured(),stripeConfigured:!!process.env.STRIPE_SECRET_KEY,mode:process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')?'live':'test'});
+ if(p==='/api/checkout/session'&&req.method==='POST'&&!checkoutConfigured())return json(res,503,{ok:false,error:'Checkout is not enabled yet.'});
  if(p==='/api/checkout/session'&&req.method==='POST'){
   if(!process.env.STRIPE_SECRET_KEY)return json(res,503,{ok:false,error:'Payments are not connected yet.'});
   const raw=await readRaw(req);let body;try{body=JSON.parse(raw.toString('utf8')||'{}')}catch{return json(res,400,{ok:false,error:'Invalid checkout request.'})}
@@ -108,7 +127,7 @@ http.createServer(async(req,res)=>{try{
    const s=event.data.object;
    if((event.type==='checkout.session.completed'&&s.payment_status==='paid')||event.type==='checkout.session.async_payment_succeeded')await fulfillPaidSession(s);
    return json(res,200,{received:true});
-  }catch(e){console.error('DTF fulfillment error',e);return json(res,500,{received:true,fulfillment_error:e.message})}
+  }catch(e){console.error('Good Company fulfillment error',e);return json(res,500,{received:true,fulfillment_error:e.message})}
  }
  if(p==='/api/printify/shops'){const r=await printify('/shops.json');return json(res,r.status,r.data)}
  if(p==='/api/printify/providers'){const r=await printify('/catalog/print_providers.json');return json(res,r.status,r.data)}
