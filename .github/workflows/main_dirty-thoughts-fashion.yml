@@ -159,10 +159,18 @@ jobs:
           echo "Checking DTF women campaign image"
           curl --fail --silent --show-error --location --retry 3 --retry-delay 3 --max-time 30 "$SITE/assets/dtf-model-grid.jpg?v=smoke" -o /tmp/dtf-model-grid.jpg
           test "$(wc -c < /tmp/dtf-model-grid.jpg)" -gt 10000
-          echo "Checking live 40-product catalog"
+          echo "Checking Good Company version and products"
+          for I in 1 2 3 4 5 6; do
+            LIVE=$(curl --fail --silent --show-error --max-time 30 "$SITE/api/health" || echo '{}')
+            if echo "$LIVE" | jq -e '.buildVersion == "good-company-commerce-v1"' >/dev/null; then break; fi
+            echo "Waiting for new Good Company worker (attempt $I)"; sleep 10
+          done
+          echo "$LIVE" | jq '{buildVersion,checkoutEnabled}'
+          echo "$LIVE" | jq -e '.buildVersion == "good-company-commerce-v1"' >/dev/null
+          echo "Checking live Good Company catalog"
           CATALOG=$(curl --fail --show-error --location --retry 3 --retry-delay 5 --retry-all-errors --max-time 90 "$SITE/api/store/catalog")
           echo "$CATALOG" | jq '{ok, total, approved_count, count, refreshing, categories: (.products | group_by(.category) | map({category: .[0].category, count: length}))}'
-          echo "$CATALOG" | jq -e '.ok == true' >/dev/null
+          echo "$CATALOG" | jq -e '.ok == true and .total == 28' >/dev/null
 
       - name: Build remaining DTF Printify drafts
         if: contains(github.event.head_commit.message, '[build-dtf]')
