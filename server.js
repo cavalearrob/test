@@ -75,7 +75,7 @@ async function buildStoreCatalog(){
   const style=String(p.title||'').split(' | ').at(-1);
   const variants=vs.map(v=>({id:v.id,title:v.title,price_cents:v.price,is_available:true}));
   return {id:p.id,name:p.title.replace(/^Good Company \| /,''),category:style,price_cents:Math.min(...variants.map(v=>v.price_cents)),mockup:front?.src||null,
-   images:images.slice(0,24).map(i=>({src:i.src})),variants};
+   images:images.map(i=>({src:i.src,variant_ids:Array.isArray(i.variant_ids)?i.variant_ids:[],position:/back/i.test(i.src)?'back':/front/i.test(i.src)?'front':null})),variants};
  }).filter(p=>p.variants.length&&p.mockup&&Number.isFinite(p.price_cents));
  return {ok:true,total:products.length,approved_count:products.length,count:products.length,refreshing:false,products};
 }
